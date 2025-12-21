@@ -25,6 +25,16 @@ const EvaluationForm: React.FC<EvaluationFormProps> = ({ employee, onClose, onSa
 
   const totalPuntos = criteria.reduce((acc, curr) => acc + curr.score, 0);
   const promedioFinal = totalPuntos > 0 ? (totalPuntos / criteria.length).toFixed(2) : "0.00";
+  const porcentajeDesempeño = (parseFloat(promedioFinal) / 5) * 100;
+
+  const getSalaryIncreaseRecommendation = (percentage: number) => {
+    if (percentage >= 98) return { text: "Incremento del 20% o más", note: "Sujeto a consideración y aprobación del jefe", color: "text-indigo-600 bg-indigo-50 border-indigo-200" };
+    if (percentage >= 88) return { text: "Incremento del 15%", note: "Rango de excelencia operativa", color: "text-emerald-600 bg-emerald-50 border-emerald-200" };
+    if (percentage >= 80) return { text: "Incremento del 10%", note: "Cumple con expectativas superiores", color: "text-blue-600 bg-blue-50 border-blue-200" };
+    return { text: "Sin incremento recomendado", note: "Requiere plan de mejora para alcanzar el 80%", color: "text-slate-500 bg-slate-50 border-slate-200" };
+  };
+
+  const increaseInfo = getSalaryIncreaseRecommendation(porcentajeDesempeño);
 
   const handleScoreChange = (id: string, score: number) => {
     setCriteria(prev => prev.map(c => c.id === id ? { ...c, score } : c));
@@ -41,10 +51,10 @@ const EvaluationForm: React.FC<EvaluationFormProps> = ({ employee, onClose, onSa
       observaciones,
       condicionBono: bono,
       totalPuntos,
-      promedioFinal: parseFloat(promedioFinal)
+      promedioFinal: parseFloat(promedioFinal),
+      date: new Date().toISOString().split('T')[0]
     };
     
-    // Adaptar para el servicio de IA existente
     const mockFullEval: any = {
       ...evaluation,
       competencies: criteria.map(c => ({ name: c.name, score: c.score, description: c.description })),
@@ -149,7 +159,7 @@ const EvaluationForm: React.FC<EvaluationFormProps> = ({ employee, onClose, onSa
                   </tr>
                   <tr className="bg-slate-200">
                     <td colSpan={2} className="px-4 py-3 text-right uppercase tracking-wider">Promedio final:</td>
-                    <td className="px-4 py-3 text-center text-lg text-emerald-700">{promedioFinal}</td>
+                    <td className="px-4 py-3 text-center text-lg text-emerald-700">{promedioFinal} ({porcentajeDesempeño.toFixed(0)}%)</td>
                   </tr>
                 </tfoot>
               </table>
@@ -212,7 +222,17 @@ const EvaluationForm: React.FC<EvaluationFormProps> = ({ employee, onClose, onSa
             <div className="text-center bg-emerald-50 p-8 rounded-3xl border border-emerald-100">
               <div className="w-16 h-16 bg-emerald-500 text-white rounded-full flex items-center justify-center mx-auto mb-4 text-2xl shadow-lg">✓</div>
               <h4 className="text-2xl font-bold text-emerald-900">Evaluación Registrada con Éxito</h4>
-              <p className="text-emerald-700 font-medium">Vulcan Energy Technology - Sistema de Desempeño ATO</p>
+              <p className="text-emerald-700 font-medium">Score Final: {porcentajeDesempeño.toFixed(1)}%</p>
+            </div>
+
+            {/* Salary Increase Recommendation Section */}
+            <div className={`p-6 rounded-2xl border-2 ${increaseInfo.color} shadow-sm animate-in fade-in slide-in-from-right-4 duration-700`}>
+              <div className="flex items-center space-x-3 mb-2">
+                <span className="text-2xl">💰</span>
+                <h5 className="font-black text-sm uppercase tracking-wider">Propuesta de Ajuste Salarial</h5>
+              </div>
+              <p className="text-2xl font-bold">{increaseInfo.text}</p>
+              <p className="text-xs font-medium opacity-80 mt-1 italic tracking-tight">{increaseInfo.note}</p>
             </div>
 
             <div className="bg-white border-2 border-slate-100 p-8 rounded-3xl space-y-6">

@@ -31,6 +31,7 @@ export enum BonusStatus {
 
 export interface Employee {
   id: string;
+  idNumber: string; // Cédula
   name: string;
   role: string;
   department: Department;

@@ -14,37 +14,60 @@ export const VULCAN_CRITERIA: Omit<TechnicalCriterion, 'score'>[] = [
   { id: 'c10', name: 'Proactividad e iniciativa', description: 'Capacidad para anticiparse a las necesidades, proponer mejoras y actuar sin requerimiento directo' },
 ];
 
+const DEFAULT_KPIS = [
+  { id: 'k1', name: 'Productividad', score: 0, weight: 40 },
+  { id: 'k2', name: 'Calidad Operativa', score: 0, weight: 30 },
+  { id: 'k3', name: 'Seguridad SIHOA', score: 0, weight: 30 }
+];
+
+// Lista extraída del PDF proporcionado
 export const INITIAL_EMPLOYEES: Employee[] = [
-  {
-    id: '1',
-    name: 'Elena Rodríguez',
-    role: 'Supervisor de Planta',
-    department: Department.Operations,
-    photo: 'https://picsum.photos/seed/elena/200/200',
-    managerName: 'Marcos Silva',
-    managerRole: 'Gerente de Operaciones',
-    lastEvaluation: '2024-03-15',
-    summary: 'Personal altamente capacitado con excelente apego a normas SIHOA.',
-    kpis: [
-      { id: 'k1', name: 'Productividad', score: 92, weight: 40 },
-      { id: 'k2', name: 'Calidad Operativa', score: 88, weight: 30 },
-      { id: 'k3', name: 'Seguridad SIHOA', score: 100, weight: 30 }
-    ]
-  },
-  {
-    id: '2',
-    name: 'Javier Martínez',
-    role: 'Técnico de Mantenimiento',
-    department: Department.Operations,
-    photo: 'https://picsum.photos/seed/javier/200/200',
-    managerName: 'Sofía Castro',
-    managerRole: 'Líder de Mantenimiento',
-    lastEvaluation: '2024-02-10',
-    summary: 'Destaca en la inmediatez de reportes y trazabilidad.',
-    kpis: [
-      { id: 'k1', name: 'Productividad', score: 85, weight: 40 },
-      { id: 'k2', name: 'Calidad Operativa', score: 90, weight: 30 },
-      { id: 'k3', name: 'Seguridad SIHOA', score: 95, weight: 30 }
-    ]
-  }
+  { id: '1', idNumber: '13463832', name: 'MILLAN HERNANDEZ, PEDRO M', role: 'INSPECTOR', department: Department.Operations, photo: 'https://picsum.photos/seed/1/200/200', managerName: 'Admin', managerRole: 'Sup', lastEvaluation: 'Pendiente', summary: 'Personal de campo.', kpis: DEFAULT_KPIS },
+  { id: '2', idNumber: '18886331', name: 'MOYA RODRIGUEZ, ANDREINA DEL VALLE', role: 'INSPECTOR', department: Department.Operations, photo: 'https://picsum.photos/seed/2/200/200', managerName: 'Admin', managerRole: 'Sup', lastEvaluation: 'Pendiente', summary: 'Personal de campo.', kpis: DEFAULT_KPIS },
+  { id: '3', idNumber: '10221698', name: 'SALAZAR TINEO, ALEXIS JOSE', role: 'SUPERVISOR', department: Department.Operations, photo: 'https://picsum.photos/seed/3/200/200', managerName: 'Admin', managerRole: 'Sup', lastEvaluation: 'Pendiente', summary: 'Liderazgo operativo.', kpis: DEFAULT_KPIS },
+  { id: '4', idNumber: '20549381', name: 'SALAZAR ROJAS, IVAN ALEJANDRO', role: 'INSPECTOR', department: Department.Operations, photo: 'https://picsum.photos/seed/4/200/200', managerName: 'Admin', managerRole: 'Sup', lastEvaluation: 'Pendiente', summary: 'Personal de campo.', kpis: DEFAULT_KPIS },
+  { id: '5', idNumber: '10064313', name: 'GARCIA T., JUAN DE J.', role: 'TÉCNICO MAYOR', department: Department.Operations, photo: 'https://picsum.photos/seed/5/200/200', managerName: 'Admin', managerRole: 'Sup', lastEvaluation: 'Pendiente', summary: 'Técnico senior.', kpis: DEFAULT_KPIS },
+  { id: '6', idNumber: '12680570', name: 'PERDOMO TOVAR, HENRY LUIS', role: 'TÉCNICO MAYOR', department: Department.Operations, photo: 'https://picsum.photos/seed/6/200/200', managerName: 'Admin', managerRole: 'Sup', lastEvaluation: 'Pendiente', summary: 'Técnico senior.', kpis: DEFAULT_KPIS },
+  { id: '7', idNumber: '13174940', name: 'BRICENO FUENMAYOR, MAURICIO G', role: 'INGENIERO', department: Department.Operations, photo: 'https://picsum.photos/seed/7/200/200', managerName: 'Admin', managerRole: 'Sup', lastEvaluation: 'Pendiente', summary: 'Soporte ingeniería.', kpis: DEFAULT_KPIS },
+  { id: '8', idNumber: '13497242', name: 'TORRES BELLO, NIUMER DANIEL', role: 'SUPERVISOR', department: Department.Operations, photo: 'https://picsum.photos/seed/8/200/200', managerName: 'Admin', managerRole: 'Sup', lastEvaluation: 'Pendiente', summary: 'Liderazgo operativo.', kpis: DEFAULT_KPIS },
+  { id: '9', idNumber: '13752904', name: 'SOLIS, CRUZ', role: 'SUPERVISOR', department: Department.Operations, photo: 'https://picsum.photos/seed/9/200/200', managerName: 'Admin', managerRole: 'Sup', lastEvaluation: 'Pendiente', summary: 'Liderazgo operativo.', kpis: DEFAULT_KPIS },
+  { id: '10', idNumber: '14129347', name: 'FREYTES GONZALEZ, ANGEL ESTEBAN', role: 'INSPECTOR', department: Department.Operations, photo: 'https://picsum.photos/seed/10/200/200', managerName: 'Admin', managerRole: 'Sup', lastEvaluation: 'Pendiente', summary: 'Personal de campo.', kpis: DEFAULT_KPIS },
+  { id: '11', idNumber: '16249514', name: 'ROJAS, ELIUVY', role: 'SUPERVISOR', department: Department.Operations, photo: 'https://picsum.photos/seed/11/200/200', managerName: 'Admin', managerRole: 'Sup', lastEvaluation: 'Pendiente', summary: 'Liderazgo operativo.', kpis: DEFAULT_KPIS },
+  { id: '12', idNumber: '17746974', name: 'AGUILERA JHONANS RAMON', role: 'MECÁNICO DE MANTENIMIENTO', department: Department.Operations, photo: 'https://picsum.photos/seed/12/200/200', managerName: 'Admin', managerRole: 'Sup', lastEvaluation: 'Pendiente', summary: 'Mantenimiento.', kpis: DEFAULT_KPIS },
+  { id: '13', idNumber: '17747170', name: 'CEDEÑO LUIS JOSE', role: 'TÉCNICO', department: Department.Operations, photo: 'https://picsum.photos/seed/13/200/200', managerName: 'Admin', managerRole: 'Sup', lastEvaluation: 'Pendiente', summary: 'Personal técnico.', kpis: DEFAULT_KPIS },
+  { id: '14', idNumber: '8974572', name: 'VELASQUEZ, SIMON ARMANDO', role: 'MECÁNICO DE MANTENIMIENTO', department: Department.Operations, photo: 'https://picsum.photos/seed/14/200/200', managerName: 'Admin', managerRole: 'Sup', lastEvaluation: 'Pendiente', summary: 'Mantenimiento.', kpis: DEFAULT_KPIS },
+  { id: '15', idNumber: '10067494', name: 'MARIN MARTINEZ, YOEL J.', role: 'TÉCNICO', department: Department.Operations, photo: 'https://picsum.photos/seed/15/200/200', managerName: 'Admin', managerRole: 'Sup', lastEvaluation: 'Pendiente', summary: 'Personal técnico.', kpis: DEFAULT_KPIS },
+  { id: '16', idNumber: '10835585', name: 'BARRETO MAITA, GRUVEL LISANDRO', role: 'TÉCNICO', department: Department.Operations, photo: 'https://picsum.photos/seed/16/200/200', managerName: 'Admin', managerRole: 'Sup', lastEvaluation: 'Pendiente', summary: 'Personal técnico.', kpis: DEFAULT_KPIS },
+  { id: '17', idNumber: '10937595', name: 'RONDON, CARLOS DANIEL', role: 'TÉCNICO', department: Department.Operations, photo: 'https://picsum.photos/seed/17/200/200', managerName: 'Admin', managerRole: 'Sup', lastEvaluation: 'Pendiente', summary: 'Personal técnico.', kpis: DEFAULT_KPIS },
+  { id: '18', idNumber: '11435750', name: 'RODRIGUEZ ABANERO, JESUS', role: 'TÉCNICO', department: Department.Operations, photo: 'https://picsum.photos/seed/18/200/200', managerName: 'Admin', managerRole: 'Sup', lastEvaluation: 'Pendiente', summary: 'Personal técnico.', kpis: DEFAULT_KPIS },
+  { id: '19', idNumber: '11640728', name: 'GONZALEZ LOPEZ, FELIX E.', role: 'SUPERVISOR', department: Department.Operations, photo: 'https://picsum.photos/seed/19/200/200', managerName: 'Admin', managerRole: 'Sup', lastEvaluation: 'Pendiente', summary: 'Liderazgo operativo.', kpis: DEFAULT_KPIS },
+  { id: '20', idNumber: '12438753', name: 'LEDEZMA, ROSALIO RAFAEL', role: 'SUPERVISOR', department: Department.Operations, photo: 'https://picsum.photos/seed/20/200/200', managerName: 'Admin', managerRole: 'Sup', lastEvaluation: 'Pendiente', summary: 'Liderazgo operativo.', kpis: DEFAULT_KPIS },
+  { id: '21', idNumber: '12677861', name: 'MARTINEZ VILLALBA, MARCOS', role: 'SUPERVISOR', department: Department.Operations, photo: 'https://picsum.photos/seed/21/200/200', managerName: 'Admin', managerRole: 'Sup', lastEvaluation: 'Pendiente', summary: 'Liderazgo operativo.', kpis: DEFAULT_KPIS },
+  { id: '22', idNumber: '12680774', name: 'GOMEZ, CARLOS ARMANDO', role: 'TÉCNICO', department: Department.Operations, photo: 'https://picsum.photos/seed/22/200/200', managerName: 'Admin', managerRole: 'Sup', lastEvaluation: 'Pendiente', summary: 'Personal técnico.', kpis: DEFAULT_KPIS },
+  { id: '23', idNumber: '12681284', name: 'MOLINA ROJAS, SERGIO DANIEL', role: 'TÉCNICO', department: Department.Operations, photo: 'https://picsum.photos/seed/23/200/200', managerName: 'Admin', managerRole: 'Sup', lastEvaluation: 'Pendiente', summary: 'Personal técnico.', kpis: DEFAULT_KPIS },
+  { id: '24', idNumber: '14029787', name: 'PEREZ SANTAELLA, RICHARD ANTONIO', role: 'SUPERVISOR', department: Department.Operations, photo: 'https://picsum.photos/seed/24/200/200', managerName: 'Admin', managerRole: 'Sup', lastEvaluation: 'Pendiente', summary: 'Liderazgo operativo.', kpis: DEFAULT_KPIS },
+  { id: '25', idNumber: '14817977', name: 'MORENO PATETY, GREGURYS JESUS', role: 'TÉCNICO', department: Department.Operations, photo: 'https://picsum.photos/seed/25/200/200', managerName: 'Admin', managerRole: 'Sup', lastEvaluation: 'Pendiente', summary: 'Personal técnico.', kpis: DEFAULT_KPIS },
+  { id: '26', idNumber: '15005659', name: 'GARCIA ROJAS, VICENTE P.', role: 'TÉCNICO', department: Department.Operations, photo: 'https://picsum.photos/seed/26/200/200', managerName: 'Admin', managerRole: 'Sup', lastEvaluation: 'Pendiente', summary: 'Personal técnico.', kpis: DEFAULT_KPIS },
+  { id: '27', idNumber: '15126252', name: 'SANTAMARIA, JEAN PIERO', role: 'TÉCNICO', department: Department.Operations, photo: 'https://picsum.photos/seed/27/200/200', managerName: 'Admin', managerRole: 'Sup', lastEvaluation: 'Pendiente', summary: 'Personal técnico.', kpis: DEFAULT_KPIS },
+  { id: '28', idNumber: '15375908', name: 'PEREZ R., JUAN A.', role: 'TÉCNICO', department: Department.Operations, photo: 'https://picsum.photos/seed/28/200/200', managerName: 'Admin', managerRole: 'Sup', lastEvaluation: 'Pendiente', summary: 'Personal técnico.', kpis: DEFAULT_KPIS },
+  { id: '29', idNumber: '16832346', name: 'URRIBARRI SIMANCAS, JORGE L', role: 'TÉCNICO', department: Department.Operations, photo: 'https://picsum.photos/seed/29/200/200', managerName: 'Admin', managerRole: 'Sup', lastEvaluation: 'Pendiente', summary: 'Personal técnico.', kpis: DEFAULT_KPIS },
+  { id: '30', idNumber: '17262102', name: 'ALFONZO, RAUL', role: 'TÉCNICO', department: Department.Operations, photo: 'https://picsum.photos/seed/30/200/200', managerName: 'Admin', managerRole: 'Sup', lastEvaluation: 'Pendiente', summary: 'Personal técnico.', kpis: DEFAULT_KPIS },
+  { id: '31', idNumber: '18414421', name: 'AGUILERA G, JONATHAN J', role: 'TÉCNICO', department: Department.Operations, photo: 'https://picsum.photos/seed/31/200/200', managerName: 'Admin', managerRole: 'Sup', lastEvaluation: 'Pendiente', summary: 'Personal técnico.', kpis: DEFAULT_KPIS },
+  { id: '32', idNumber: '12223217', name: 'GUTIERREZ VELASQUEZ, PEDRO MARIA', role: 'TÉCNICO', department: Department.Operations, photo: 'https://picsum.photos/seed/32/200/200', managerName: 'Admin', managerRole: 'Sup', lastEvaluation: 'Pendiente', summary: 'Personal técnico.', kpis: DEFAULT_KPIS },
+  { id: '33', idNumber: '16141719', name: 'ARREAZA, JOSE', role: 'TÉCNICO', department: Department.Operations, photo: 'https://picsum.photos/seed/33/200/200', managerName: 'Admin', managerRole: 'Sup', lastEvaluation: 'Pendiente', summary: 'Personal técnico.', kpis: DEFAULT_KPIS },
+  { id: '34', idNumber: '18371774', name: 'BONILLA RIVERA, ENDYS JOSE', role: 'TÉCNICO', department: Department.Operations, photo: 'https://picsum.photos/seed/34/200/200', managerName: 'Admin', managerRole: 'Sup', lastEvaluation: 'Pendiente', summary: 'Personal técnico.', kpis: DEFAULT_KPIS },
+  { id: '35', idNumber: '15779074', name: 'LEIBA C., DENNY J', role: 'TÉCNICO', department: Department.Operations, photo: 'https://picsum.photos/seed/35/200/200', managerName: 'Admin', managerRole: 'Sup', lastEvaluation: 'Pendiente', summary: 'Personal técnico.', kpis: DEFAULT_KPIS },
+  { id: '36', idNumber: '15983973', name: 'CORVO ACUÑA, LUCAS ANTONIO', role: 'TÉCNICO', department: Department.Operations, photo: 'https://picsum.photos/seed/36/200/200', managerName: 'Admin', managerRole: 'Sup', lastEvaluation: 'Pendiente', summary: 'Personal técnico.', kpis: DEFAULT_KPIS },
+  { id: '37', idNumber: '18679936', name: 'QUIJADA, ANDREW', role: 'TÉCNICO', department: Department.Operations, photo: 'https://picsum.photos/seed/37/200/200', managerName: 'Admin', managerRole: 'Sup', lastEvaluation: 'Pendiente', summary: 'Personal técnico.', kpis: DEFAULT_KPIS },
+  { id: '38', idNumber: '12680014', name: 'MAITA, FREDDY', role: 'TÉCNICO', department: Department.Operations, photo: 'https://picsum.photos/seed/38/200/200', managerName: 'Admin', managerRole: 'Sup', lastEvaluation: 'Pendiente', summary: 'Personal técnico.', kpis: DEFAULT_KPIS },
+  { id: '39', idNumber: '18112864', name: 'RODRIGUEZ, RONALD', role: 'TÉCNICO', department: Department.Operations, photo: 'https://picsum.photos/seed/39/200/200', managerName: 'Admin', managerRole: 'Sup', lastEvaluation: 'Pendiente', summary: 'Personal técnico.', kpis: DEFAULT_KPIS },
+  { id: '40', idNumber: '16396024', name: 'MOYA, JESUS', role: 'TÉCNICO', department: Department.Operations, photo: 'https://picsum.photos/seed/40/200/200', managerName: 'Admin', managerRole: 'Sup', lastEvaluation: 'Pendiente', summary: 'Personal técnico.', kpis: DEFAULT_KPIS },
+  { id: '41', idNumber: '10936415', name: 'URPIN, ANGEL', role: 'TÉCNICO', department: Department.Operations, photo: 'https://picsum.photos/seed/41/200/200', managerName: 'Admin', managerRole: 'Sup', lastEvaluation: 'Pendiente', summary: 'Personal técnico.', kpis: DEFAULT_KPIS },
+  { id: '42', idNumber: '15716639', name: 'BARRETO, JOHN', role: 'TÉCNICO', department: Department.Operations, photo: 'https://picsum.photos/seed/42/200/200', managerName: 'Admin', managerRole: 'Sup', lastEvaluation: 'Pendiente', summary: 'Personal técnico.', kpis: DEFAULT_KPIS },
+  { id: '43', idNumber: '13611204', name: 'CAMPOS, RAFAEL', role: 'TÉCNICO', department: Department.Operations, photo: 'https://picsum.photos/seed/43/200/200', managerName: 'Admin', managerRole: 'Sup', lastEvaluation: 'Pendiente', summary: 'Personal técnico.', kpis: DEFAULT_KPIS },
+  { id: '44', idNumber: '12016326', name: 'MARTINEZ, JESUS', role: 'TÉCNICO', department: Department.Operations, photo: 'https://picsum.photos/seed/44/200/200', managerName: 'Admin', managerRole: 'Sup', lastEvaluation: 'Pendiente', summary: 'Personal técnico.', kpis: DEFAULT_KPIS },
+  { id: '45', idNumber: '19143475', name: 'CENTENO, ANDRYKSON', role: 'TÉCNICO', department: Department.Operations, photo: 'https://picsum.photos/seed/45/200/200', managerName: 'Admin', managerRole: 'Sup', lastEvaluation: 'Pendiente', summary: 'Personal técnico.', kpis: DEFAULT_KPIS },
+  { id: '46', idNumber: '15846580', name: 'MEDINA, JOSE', role: 'TÉCNICO', department: Department.Operations, photo: 'https://picsum.photos/seed/46/200/200', managerName: 'Admin', managerRole: 'Sup', lastEvaluation: 'Pendiente', summary: 'Personal técnico.', kpis: DEFAULT_KPIS },
+  { id: '47', idNumber: '10938836', name: 'REYES, ROMULO', role: 'TÉCNICO', department: Department.Operations, photo: 'https://picsum.photos/seed/47/200/200', managerName: 'Admin', managerRole: 'Sup', lastEvaluation: 'Pendiente', summary: 'Personal técnico.', kpis: DEFAULT_KPIS },
+  { id: '48', idNumber: '13165094', name: 'CARAGUICHE, EMIL', role: 'TÉCNICO', department: Department.Operations, photo: 'https://picsum.photos/seed/48/200/200', managerName: 'Admin', managerRole: 'Sup', lastEvaluation: 'Pendiente', summary: 'Personal técnico.', kpis: DEFAULT_KPIS },
 ];

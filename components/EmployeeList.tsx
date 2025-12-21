@@ -5,48 +5,98 @@ import { Employee, Department } from '../types';
 interface EmployeeListProps {
   employees: Employee[];
   onSelect: (employee: Employee) => void;
+  onAddNew: () => void;
+  onBulkAdd?: (data: string) => void;
 }
 
-const EmployeeList: React.FC<EmployeeListProps> = ({ employees, onSelect }) => {
+const EmployeeList: React.FC<EmployeeListProps> = ({ employees, onSelect, onAddNew, onBulkAdd }) => {
   const [filter, setFilter] = useState<string>('all');
   const [search, setSearch] = useState('');
+  const [showBulkModal, setShowBulkModal] = useState(false);
+  const [bulkText, setBulkText] = useState('');
 
   const filteredEmployees = employees.filter(emp => {
     const matchesDept = filter === 'all' || emp.department === filter;
-    const matchesSearch = emp.name.toLowerCase().includes(search.toLowerCase()) || 
-                          emp.role.toLowerCase().includes(search.toLowerCase());
+    const matchesSearch = 
+      emp.name.toLowerCase().includes(search.toLowerCase()) || 
+      emp.role.toLowerCase().includes(search.toLowerCase()) ||
+      emp.idNumber.includes(search);
     return matchesDept && matchesSearch;
   });
 
+  const handleBulkSubmit = () => {
+    if (onBulkAdd && bulkText) {
+      onBulkAdd(bulkText);
+      setShowBulkModal(false);
+      setBulkText('');
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
-        <div className="flex space-x-2 bg-white p-1 rounded-xl shadow-sm border border-slate-100">
+      {showBulkModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-3xl p-8 max-w-2xl w-full shadow-2xl animate-in zoom-in duration-300">
+             <h3 className="text-xl font-bold text-slate-800 mb-2">Carga Masiva desde Excel</h3>
+             <p className="text-sm text-slate-500 mb-6">Pega las columnas (Cédula, Nombre, Cargo) directamente de tu hoja de cálculo.</p>
+             <textarea 
+               value={bulkText}
+               onChange={(e) => setBulkText(e.target.value)}
+               className="w-full h-64 p-4 bg-slate-50 border rounded-2xl font-mono text-xs mb-6 outline-none focus:ring-2 focus:ring-[#003366]"
+               placeholder="13463832	MILLAN HERNANDEZ, PEDRO M	INSPECTOR..."
+             />
+             <div className="flex justify-end space-x-3">
+               <button onClick={() => setShowBulkModal(false)} className="px-6 py-2 font-bold text-slate-400">Cancelar</button>
+               <button onClick={handleBulkSubmit} className="bg-[#003366] text-white px-8 py-2 rounded-xl font-bold">Procesar Nómina</button>
+             </div>
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-col lg:flex-row gap-4 justify-between items-start lg:items-center">
+        <div className="flex flex-wrap gap-2 bg-white p-1 rounded-xl shadow-sm border border-slate-100">
           <button 
             onClick={() => setFilter('all')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filter === 'all' ? 'bg-slate-900 text-white' : 'text-slate-500 hover:text-slate-800'}`}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filter === 'all' ? 'bg-[#003366] text-white' : 'text-slate-500 hover:text-slate-800'}`}
           >
             Todos
           </button>
-          {Object.values(Department).map(dept => (
-            <button 
-              key={dept}
-              onClick={() => setFilter(dept)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filter === dept ? 'bg-slate-900 text-white' : 'text-slate-500 hover:text-slate-800'}`}
-            >
-              {dept}
-            </button>
-          ))}
+          <button 
+            onClick={() => setFilter(Department.Operations)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filter === Department.Operations ? 'bg-[#003366] text-white' : 'text-slate-500 hover:text-slate-800'}`}
+          >
+            Operativa
+          </button>
+          <button 
+            onClick={() => setFilter(Department.Administrative)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filter === Department.Administrative ? 'bg-[#003366] text-white' : 'text-slate-500 hover:text-slate-800'}`}
+          >
+            Administrativa
+          </button>
         </div>
         
-        <div className="relative w-full md:w-64">
-           <input 
-            type="text" 
-            placeholder="Filtrar por nombre o cargo..." 
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-          />
+        <div className="flex w-full lg:w-auto space-x-3">
+          <div className="relative flex-1 lg:w-64">
+             <input 
+              type="text" 
+              placeholder="Cédula o nombre..." 
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+            />
+          </div>
+          <button 
+            onClick={() => setShowBulkModal(true)}
+            className="bg-white border border-[#003366] text-[#003366] px-4 py-2.5 rounded-xl text-sm font-bold hover:bg-slate-50 transition-all flex items-center"
+          >
+             📥 Carga Masiva
+          </button>
+          <button 
+            onClick={onAddNew}
+            className="bg-[#003366] text-white px-6 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-blue-900/10 hover:bg-[#002244] transition-all flex items-center shrink-0"
+          >
+            + Individual
+          </button>
         </div>
       </div>
 
@@ -60,39 +110,36 @@ const EmployeeList: React.FC<EmployeeListProps> = ({ employees, onSelect }) => {
               className="group bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:shadow-md hover:border-indigo-200 transition-all cursor-pointer relative overflow-hidden"
             >
               <div className="absolute top-0 right-0 p-4">
-                 <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold border-2 ${
+                 <div className={`w-10 h-10 rounded-full flex items-center justify-center text-[10px] font-bold border-2 ${
                    score > 90 ? 'border-indigo-400 bg-indigo-50 text-indigo-600' :
-                   score > 80 ? 'border-emerald-400 bg-emerald-50 text-emerald-600' :
-                   'border-amber-400 bg-amber-50 text-amber-600'
+                   score > 0 ? 'border-emerald-400 bg-emerald-50 text-emerald-600' :
+                   'border-slate-200 bg-slate-50 text-slate-400'
                  }`}>
-                   {score}%
+                   {score > 0 ? `${score}%` : 'N/E'}
                  </div>
               </div>
 
               <div className="flex flex-col items-center text-center">
-                <img src={emp.photo} alt={emp.name} className="w-20 h-20 rounded-full border-2 border-slate-50 shadow-sm" />
-                <h5 className="mt-4 font-bold text-slate-800 group-hover:text-indigo-600 transition-colors">{emp.name}</h5>
-                <p className="text-xs text-slate-500 font-medium uppercase tracking-wide mt-1">{emp.role}</p>
+                <img src={emp.photo} alt={emp.name} className="w-16 h-16 rounded-full border-2 border-slate-50 shadow-sm object-cover grayscale group-hover:grayscale-0 transition-all" />
+                <h5 className="mt-4 font-bold text-slate-800 text-sm leading-tight uppercase group-hover:text-[#003366] transition-colors">{emp.name}</h5>
+                <p className="text-[10px] text-slate-500 font-black mt-1">V-{emp.idNumber}</p>
+                <p className="text-[10px] text-indigo-600 font-bold uppercase tracking-wide mt-0.5">{emp.role}</p>
                 
-                <div className="mt-4 flex flex-wrap justify-center gap-1">
-                  <span className="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-500 rounded font-semibold uppercase">{emp.department}</span>
-                </div>
-
-                <div className="mt-6 w-full pt-6 border-t border-slate-50">
-                  <div className="flex justify-between text-[10px] text-slate-400 font-bold uppercase mb-2">
-                    <span>Performance</span>
+                <div className="mt-4 w-full pt-4 border-t border-slate-50">
+                  <div className="flex justify-between text-[9px] text-slate-400 font-bold uppercase mb-2">
+                    <span>Evaluación Actual</span>
                     <span>{score}/100</span>
                   </div>
                   <div className="w-full bg-slate-50 h-1.5 rounded-full overflow-hidden">
                     <div 
-                      className={`h-full transition-all duration-500 ${score > 90 ? 'bg-indigo-500' : score > 80 ? 'bg-emerald-500' : 'bg-amber-500'}`} 
+                      className={`h-full transition-all duration-500 ${score > 90 ? 'bg-indigo-500' : 'bg-emerald-500'}`} 
                       style={{ width: `${score}%` }}
                     ></div>
                   </div>
                 </div>
 
-                <button className="mt-6 text-sm text-indigo-600 font-semibold flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  Ver perfil detallado <span className="ml-1">→</span>
+                <button className="mt-6 text-[10px] text-[#003366] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
+                  Abrir Expediente →
                 </button>
               </div>
             </div>
@@ -103,7 +150,7 @@ const EmployeeList: React.FC<EmployeeListProps> = ({ employees, onSelect }) => {
       {filteredEmployees.length === 0 && (
         <div className="flex flex-col items-center justify-center py-20 bg-white rounded-2xl border-2 border-dashed border-slate-100">
            <div className="text-4xl mb-4">🔍</div>
-           <p className="text-slate-500 font-medium">No se encontraron empleados que coincidan con la búsqueda.</p>
+           <p className="text-slate-500 font-medium">No se encontraron empleados en la nómina.</p>
         </div>
       )}
     </div>
