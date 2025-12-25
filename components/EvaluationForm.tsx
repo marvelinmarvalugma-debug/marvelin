@@ -24,9 +24,11 @@ const MESES = [
 
 const EvaluationForm: React.FC<EvaluationFormProps> = ({ employee, evaluatorName, onClose, onSave }) => {
   const currentYear = new Date().getFullYear();
+  const currentMonthName = new Date().toLocaleString('es-ES', { month: 'long' }).toLowerCase();
+
   const [step, setStep] = useState(1);
   const [campo, setCampo] = useState('Cariña');
-  const [mes, setMes] = useState(new Date().toLocaleString('es-ES', { month: 'long' }).toLowerCase());
+  const [mes, setMes] = useState(currentMonthName);
   const [anio, setAnio] = useState(currentYear.toString());
   const [area, setArea] = useState<'Operativa' | 'Administrativa'>('Operativa');
   const [criteria, setCriteria] = useState<TechnicalCriterion[]>(
@@ -98,7 +100,7 @@ const EvaluationForm: React.FC<EvaluationFormProps> = ({ employee, evaluatorName
   };
 
   return (
-    <div className="bg-white rounded-[40px] shadow-2xl border border-slate-100 overflow-hidden max-w-5xl mx-auto my-4">
+    <div className="bg-white rounded-[40px] shadow-2xl border border-slate-100 overflow-hidden max-w-5xl mx-auto my-4 animate-in fade-in duration-500">
       <div className="bg-[#003366] p-8 text-white border-b-8 border-[#FFCC00]">
         <div className="flex justify-between items-center">
           <div>
@@ -117,33 +119,38 @@ const EvaluationForm: React.FC<EvaluationFormProps> = ({ employee, evaluatorName
           <div className="space-y-8 animate-in fade-in slide-in-from-top-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Evaluador de Turno</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Evaluador Responsable</label>
                 <div className="p-4 bg-slate-50 rounded-2xl border-2 border-[#003366]/10 text-[#003366] font-black uppercase">
                    {evaluatorName}
                 </div>
                 <p className="text-[10px] text-emerald-500 font-bold uppercase">Sesión Protegida ✓</p>
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Área de Trabajo</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tipo de Matriz</label>
                 <div className="flex space-x-4">
                    <button onClick={() => setArea('Operativa')} className={`flex-1 p-4 rounded-2xl border-2 font-black uppercase text-xs transition-all ${area === 'Operativa' ? 'bg-[#003366] text-white border-[#003366]' : 'bg-slate-50 text-slate-400 border-transparent'}`}>Operativa</button>
                    <button onClick={() => setArea('Administrativa')} className={`flex-1 p-4 rounded-2xl border-2 font-black uppercase text-xs transition-all ${area === 'Administrativa' ? 'bg-[#003366] text-white border-[#003366]' : 'bg-slate-50 text-slate-400 border-transparent'}`}>Administrativa</button>
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Campo / Estación</label>
-                <input value={campo} onChange={e => setCampo(e.target.value)} className="w-full p-4 border-2 rounded-2xl bg-slate-50 font-bold uppercase text-[#003366] outline-none focus:border-[#003366] transition-all" />
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Estación / Campo</label>
+                <input 
+                  value={campo} 
+                  onChange={e => setCampo(e.target.value.toUpperCase())} 
+                  className="w-full p-4 border-2 rounded-2xl bg-slate-50 font-bold uppercase text-[#003366] outline-none focus:border-[#003366] transition-all"
+                  placeholder="NOMBRE DEL CAMPO"
+                />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Mes de Evaluación</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Mes de Nómina</label>
                   <select 
                     value={mes} 
                     onChange={e => setMes(e.target.value)} 
                     className="w-full p-4 border-2 rounded-2xl bg-slate-50 font-bold uppercase text-[#003366] outline-none focus:border-[#003366] cursor-pointer"
                   >
                     {MESES.map(m => (
-                      <option key={m} value={m}>{m}</option>
+                      <option key={m} value={m}>{m.toUpperCase()}</option>
                     ))}
                   </select>
                 </div>
@@ -163,7 +170,7 @@ const EvaluationForm: React.FC<EvaluationFormProps> = ({ employee, evaluatorName
             </div>
             <div className="pt-6 flex justify-end">
               <button onClick={() => setStep(2)} className="bg-[#003366] text-white px-10 py-4 rounded-2xl font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-blue-900/10">
-                Siguiente: Matriz Técnica →
+                Iniciar Evaluación Técnica →
               </button>
             </div>
           </div>
@@ -175,8 +182,8 @@ const EvaluationForm: React.FC<EvaluationFormProps> = ({ employee, evaluatorName
               <table className="w-full text-left text-sm">
                 <thead className="bg-slate-50">
                   <tr>
-                    <th className="px-6 py-5 font-black text-slate-400 text-[10px] uppercase tracking-widest">Criterio Vulcan</th>
-                    <th className="px-6 py-5 font-black text-slate-400 text-[10px] uppercase tracking-widest text-center">Puntuación</th>
+                    <th className="px-6 py-5 font-black text-slate-400 text-[10px] uppercase tracking-widest">Criterio Vulcan Energy</th>
+                    <th className="px-6 py-5 font-black text-slate-400 text-[10px] uppercase tracking-widest text-center">Puntuación (1-5)</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -206,17 +213,17 @@ const EvaluationForm: React.FC<EvaluationFormProps> = ({ employee, evaluatorName
             </div>
             <div className="flex justify-between items-center bg-[#001a33] p-8 rounded-[32px] text-white">
                <div>
-                  <p className="text-[10px] font-black opacity-40 uppercase tracking-widest">Puntaje Final ({porcentajeDesempeño.toFixed(1)}%)</p>
+                  <p className="text-[10px] font-black opacity-40 uppercase tracking-widest">Puntaje Preliminar</p>
                   <p className={`text-4xl font-black ${porcentajeDesempeño < 80 ? 'text-rose-400' : 'text-[#FFCC00]'}`}>{porcentajeDesempeño.toFixed(1)}%</p>
                </div>
                <div className="flex space-x-4">
-                  <button onClick={() => setStep(1)} className="px-6 py-3 font-black uppercase text-[10px] text-slate-400">Regresar</button>
+                  <button onClick={() => setStep(1)} className="px-6 py-3 font-black uppercase text-[10px] text-slate-400">Datos Generales</button>
                   <button 
                     disabled={criteriaPending > 0}
                     onClick={() => setStep(3)}
                     className={`px-10 py-4 rounded-2xl font-black uppercase tracking-widest transition-all ${criteriaPending > 0 ? 'bg-slate-800 text-slate-600 cursor-not-allowed' : 'bg-white text-[#003366] hover:scale-105'}`}
                   >
-                    Resumen Final →
+                    Ver Resumen →
                   </button>
                </div>
             </div>
@@ -226,29 +233,29 @@ const EvaluationForm: React.FC<EvaluationFormProps> = ({ employee, evaluatorName
         {step === 3 && (
           <div className="space-y-10 animate-in fade-in duration-300">
              <div className="space-y-3">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Observaciones Técnicas</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Observaciones de Campo</label>
                 <textarea 
                   value={observaciones} 
                   onChange={e => setObservaciones(e.target.value)}
                   className="w-full h-32 p-6 border-2 rounded-[32px] bg-slate-50 focus:border-[#003366] outline-none font-medium"
-                  placeholder="Detalle incidentes, comportamiento o felicitaciones..."
+                  placeholder="Detalle el desempeño observado este mes..."
                 ></textarea>
              </div>
 
              <div className={`p-8 rounded-[32px] border-4 text-center ${increaseInfo.color}`}>
-                <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Recomendación Salarial</p>
+                <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Recomendación Sugerida</p>
                 <p className="text-2xl font-black my-2 uppercase">{increaseInfo.text}</p>
                 <p className="text-[10px] font-bold uppercase">{increaseInfo.note}</p>
              </div>
 
              <div className="flex justify-between pt-6 border-t">
-                <button onClick={() => setStep(2)} className="text-slate-400 font-black uppercase text-xs tracking-widest">Matriz Técnica</button>
+                <button onClick={() => setStep(2)} className="text-slate-400 font-black uppercase text-xs tracking-widest">Volver a Matriz</button>
                 <button 
                   onClick={processEvaluation}
                   disabled={analyzing}
                   className="bg-[#FFCC00] text-[#003366] px-12 py-5 rounded-2xl font-black uppercase tracking-widest shadow-2xl hover:scale-105 transition-all"
                 >
-                  {analyzing ? 'PROCESANDO...' : 'FIRMAR REPORTE'}
+                  {analyzing ? 'FIRMA ELECTRÓNICA...' : 'CERRAR Y FIRMAR REPORTE'}
                 </button>
              </div>
           </div>
@@ -264,16 +271,16 @@ const EvaluationForm: React.FC<EvaluationFormProps> = ({ employee, evaluatorName
                    {porcentajeDesempeño < 80 ? 'Evaluación Crítica' : 'Registro Exitoso'}
                 </h3>
                 <p className={`font-bold uppercase text-[10px] mt-2 tracking-widest ${porcentajeDesempeño < 80 ? 'text-rose-600' : 'text-emerald-600'}`}>
-                   Firmado Digitalmente por {evaluatorName} para el periodo {mes} {anio}
+                   Periodo Fiscal: {mes.toUpperCase()} {anio}
                 </p>
              </div>
              
              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="p-8 bg-white border-2 rounded-[32px] border-slate-100">
-                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Métricas del Empleado</p>
+                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Eficiencia Operativa</p>
                    <div className="space-y-4">
                       <div className="flex justify-between items-center">
-                         <span className="text-xs font-bold text-slate-700 uppercase">Puntaje Operativo</span>
+                         <span className="text-xs font-bold text-slate-700 uppercase">Puntuación Final</span>
                          <span className={`text-xl font-black ${porcentajeDesempeño < 80 ? 'text-rose-600' : 'text-[#003366]'}`}>{porcentajeDesempeño.toFixed(1)}%</span>
                       </div>
                       <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden">
@@ -282,15 +289,15 @@ const EvaluationForm: React.FC<EvaluationFormProps> = ({ employee, evaluatorName
                    </div>
                 </div>
                 <div className={`p-8 rounded-[32px] text-white ${porcentajeDesempeño < 80 ? 'bg-rose-900' : 'bg-[#003366]'}`}>
-                   <p className="text-[10px] font-black opacity-40 uppercase tracking-widest mb-4">Estatus Final</p>
+                   <p className="text-[10px] font-black opacity-40 uppercase tracking-widest mb-4">Resultado de Nómina</p>
                    <p className={`text-2xl font-black uppercase ${porcentajeDesempeño < 80 ? 'text-white' : 'text-[#FFCC00]'}`}>{increaseInfo.text}</p>
                    <p className="text-[9px] mt-2 opacity-60 uppercase font-bold">{increaseInfo.note}</p>
                 </div>
              </div>
 
              <div className="flex justify-center space-x-6 pt-6 print:hidden">
-                <button onClick={onClose} className="px-8 py-4 font-black text-slate-400 uppercase text-xs tracking-widest hover:text-[#003366] transition-all">Siguiente Empleado</button>
-                <button onClick={() => window.print()} className="bg-[#003366] text-white px-10 py-5 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-blue-900/20">Imprimir Reporte</button>
+                <button onClick={onClose} className="px-8 py-4 font-black text-slate-400 uppercase text-xs tracking-widest hover:text-[#003366] transition-all">Listado de Personal</button>
+                <button onClick={() => window.print()} className="bg-[#003366] text-white px-10 py-5 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-blue-900/20">Imprimir Certificado</button>
              </div>
           </div>
         )}
