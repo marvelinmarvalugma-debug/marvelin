@@ -6,24 +6,30 @@ import EmployeeList from './components/EmployeeList';
 import EmployeeDetails from './components/EmployeeDetails';
 import EvaluationForm from './components/EvaluationForm';
 import AddEmployeeForm from './components/AddEmployeeForm';
+import MonthlyReportModal from './components/MonthlyReportModal';
 import { INITIAL_EMPLOYEES } from './constants';
 import { Employee, FullEvaluation, KPI, Department } from './types';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [employees, setEmployees] = useState<Employee[]>(INITIAL_EMPLOYEES);
+  const [evaluationsHistory, setEvaluationsHistory] = useState<FullEvaluation[]>([]);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [evaluatingEmployee, setEvaluatingEmployee] = useState<Employee | null>(null);
   const [isAddingEmployee, setIsAddingEmployee] = useState(false);
+  const [showReportsModal, setShowReportsModal] = useState(false);
 
   const handleSaveEvaluation = (evaluation: FullEvaluation) => {
+    // Guardar en el historial global para reportes mensuales
+    setEvaluationsHistory(prev => [...prev, evaluation]);
+
+    // Actualizar estado actual del empleado
     setEmployees(prev => prev.map(emp => 
       emp.id === evaluation.employeeId 
         ? { 
             ...emp, 
             lastEvaluation: evaluation.date,
             kpis: emp.kpis.map(k => {
-              // Simulación de actualización de KPI promedio basada en matriz
               return { ...k, score: Math.round(evaluation.promedioFinal * 20) };
             })
           } 
@@ -56,8 +62,8 @@ const App: React.FC = () => {
     const lines = text.split('\n');
     const newBatch: Employee[] = [];
     
-    lines.forEach((line, index) => {
-      const parts = line.split('\t'); // Espera tabulación de Excel
+    lines.forEach((line) => {
+      const parts = line.split('\t');
       if (parts.length >= 2) {
         const idNumber = parts[0].trim();
         const name = parts[1].trim();
@@ -70,8 +76,8 @@ const App: React.FC = () => {
           role,
           department: Department.Operations,
           photo: `https://picsum.photos/seed/${idNumber}/200/200`,
-          managerName: 'Admin',
-          managerRole: 'Supervisor',
+          managerName: 'NELSON MARCANO',
+          managerRole: 'Supervisor Principal',
           lastEvaluation: 'Pendiente',
           summary: 'Importado de nómina masiva.',
           kpis: [
@@ -178,8 +184,20 @@ const App: React.FC = () => {
   };
 
   return (
-    <Layout activeTab={evaluatingEmployee || isAddingEmployee ? 'evaluations' : activeTab} setActiveTab={setActiveTab}>
+    <Layout 
+      activeTab={evaluatingEmployee || isAddingEmployee ? 'evaluations' : activeTab} 
+      setActiveTab={setActiveTab}
+      onDownloadReports={() => setShowReportsModal(true)}
+    >
       {renderContent()}
+      
+      {showReportsModal && (
+        <MonthlyReportModal 
+          evaluations={evaluationsHistory} 
+          employees={employees}
+          onClose={() => setShowReportsModal(false)} 
+        />
+      )}
     </Layout>
   );
 };
