@@ -29,6 +29,12 @@ const App: React.FC = () => {
     return employees.filter(emp => emp.managerName === currentEvaluator);
   }, [employees, currentEvaluator, isJaquelin]);
 
+  // Filtrar historial de evaluaciones para el reporte
+  const filteredEvaluationsForReport = useMemo(() => {
+    if (isJaquelin) return evaluationsHistory;
+    return evaluationsHistory.filter(ev => ev.evaluador === currentEvaluator);
+  }, [evaluationsHistory, currentEvaluator, isJaquelin]);
+
   const handleSaveEvaluation = (evaluation: FullEvaluation) => {
     setEvaluationsHistory(prev => [...prev, evaluation]);
     setEmployees(prev => prev.map(emp => 
@@ -141,7 +147,6 @@ const App: React.FC = () => {
         const batch = lines.map(l => {
           const p = l.split('\t');
           if (p.length < 2) return null;
-          // Mantener los KPIs por defecto de la estructura original
           const defaultKpis = [
             { id: 'k1', name: 'Productividad', score: 0, weight: 40 },
             { id: 'k2', name: 'Calidad Operativa', score: 0, weight: 30 },
@@ -163,8 +168,6 @@ const App: React.FC = () => {
           };
         }).filter(Boolean) as Employee[];
         
-        // REQUERIMIENTO: Limpiar data anterior al hacer carga masiva
-        // Se limpian tanto los empleados como el historial de evaluaciones para evitar inconsistencias
         setEmployees(batch);
         setEvaluationsHistory([]);
         setActiveTab('employees');
@@ -276,7 +279,13 @@ const App: React.FC = () => {
       onChangeEvaluator={() => setCurrentEvaluator(null)}
     >
       {renderContent()}
-      {showReportsModal && <MonthlyReportModal evaluations={evaluationsHistory} employees={employees} onClose={() => setShowReportsModal(false)} />}
+      {showReportsModal && (
+        <MonthlyReportModal 
+          evaluations={filteredEvaluationsForReport} 
+          employees={filteredEmployees} 
+          onClose={() => setShowReportsModal(false)} 
+        />
+      )}
     </Layout>
   );
 };
