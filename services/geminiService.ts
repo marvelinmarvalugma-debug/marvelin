@@ -2,14 +2,11 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Employee, FullEvaluation } from "../types";
 
-// Initialize Gemini API client
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
 /**
  * Generates insights about an employee's performance based on their KPIs.
  */
 export async function generatePerformanceInsights(employee: Employee) {
-  // Accessing kpis property which is now added to the Employee type
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const kpiDetails = employee.kpis.map(k => `${k.name}: ${k.score}/100`).join(', ');
   
   const prompt = `Analiza el desempeño de ${employee.name}, ${employee.role} en ${employee.department}. 
@@ -33,7 +30,6 @@ export async function generatePerformanceInsights(employee: Employee) {
         }
       }
     });
-    // Safely extract text output from response
     return JSON.parse(response.text || '{}');
   } catch (error) {
     console.error("Error generating performance insights:", error);
@@ -45,9 +41,8 @@ export async function generatePerformanceInsights(employee: Employee) {
  * Analyzes a full evaluation report to provide strategic HR feedback.
  */
 export async function analyzeFullEvaluation(employee: Employee, evaluation: FullEvaluation) {
-  // Using criteria and observaciones from FullEvaluation type instead of non-existent properties
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const compDetails = evaluation.criteria.map(c => `${c.name}: ${c.score}/5`).join(', ');
-  // KPIs are taken from the employee object to provide historical context
   const kpiDetails = employee.kpis.map(k => `${k.name}: ${k.score}/100`).join(', ');
 
   const prompt = `Como experto en HR, analiza la siguiente evaluación de ${employee.name}:
@@ -77,7 +72,6 @@ export async function analyzeFullEvaluation(employee: Employee, evaluation: Full
         }
       }
     });
-    // Extract text directly from response object
     return JSON.parse(response.text || 'null');
   } catch (error) {
     console.error("Error analyzing full evaluation:", error);
