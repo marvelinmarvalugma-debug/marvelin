@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { BONUS_APPROVER } from '../types';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -18,10 +19,12 @@ const Layout: React.FC<LayoutProps> = ({
   evaluatorName,
   onChangeEvaluator
 }) => {
+  const isJaquelin = evaluatorName === BONUS_APPROVER;
+
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: '📊' },
     { id: 'employees', label: 'Personal', icon: '👥' },
-    { id: 'evaluations', label: 'Matriz Desempeño', icon: '📝' },
+    { id: 'evaluations', label: isJaquelin ? 'Aprobación Bonos' : 'Matriz Desempeño', icon: isJaquelin ? '✅' : '📝' },
   ];
 
   return (
@@ -52,13 +55,13 @@ const Layout: React.FC<LayoutProps> = ({
 
         {evaluatorName && (
           <div className="p-6 border-t border-white/5">
-            <div className="p-4 bg-white/5 rounded-2xl border border-white/10 group relative">
+            <div className={`p-4 rounded-2xl border group relative ${isJaquelin ? 'bg-indigo-900/30 border-[#FFCC00]/50' : 'bg-white/5 border-white/10'}`}>
               <div className="flex items-center">
-                <div className="w-10 h-10 rounded-full bg-[#FFCC00] flex items-center justify-center text-[#003366] text-xs font-black">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-black ${isJaquelin ? 'bg-[#FFCC00] text-[#003366]' : 'bg-[#003366] text-white'}`}>
                   {evaluatorName.split(' ')[0][0]}
                 </div>
                 <div className="ml-3 overflow-hidden">
-                  <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Evaluador</p>
+                  <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{isJaquelin ? 'Director' : 'Evaluador'}</p>
                   <p className="text-xs font-bold truncate text-white uppercase">{evaluatorName}</p>
                 </div>
               </div>
@@ -66,7 +69,7 @@ const Layout: React.FC<LayoutProps> = ({
                 onClick={onChangeEvaluator}
                 className="mt-3 w-full text-[9px] font-black uppercase text-[#FFCC00] hover:text-white transition-colors border border-[#FFCC00]/30 py-1 rounded-lg"
               >
-                Cambiar Usuario
+                Cerrar Sesión
               </button>
             </div>
           </div>
@@ -78,18 +81,20 @@ const Layout: React.FC<LayoutProps> = ({
         <header className="sticky top-0 z-10 bg-white shadow-sm border-b border-slate-200 px-8 py-4 flex justify-between items-center print:hidden">
           <div>
             <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest">{activeTab}</h2>
-            <p className="text-lg font-bold text-slate-800">Panel de Operaciones</p>
+            <p className="text-lg font-bold text-slate-800">{isJaquelin ? 'Gestión de Beneficios' : 'Panel de Operaciones'}</p>
           </div>
           <div className="flex items-center space-x-6">
             <div className="hidden md:flex flex-col text-right">
               <span className="text-xs font-bold text-slate-800 uppercase">{evaluatorName || 'SISTEMA'}</span>
-              <span className="text-[10px] text-emerald-500 font-bold uppercase tracking-widest">● Sesión Autorizada</span>
+              <span className={`text-[10px] font-bold uppercase tracking-widest ${isJaquelin ? 'text-[#FFCC00]' : 'text-emerald-500'}`}>
+                ● Sesión de {isJaquelin ? 'Directorio' : 'Control'}
+              </span>
             </div>
             <button 
               onClick={onDownloadReports}
               className="bg-[#003366] text-white px-5 py-2 rounded font-bold text-xs hover:bg-[#002244] transition-all shadow-lg shadow-blue-900/10"
             >
-              REPORTES PDF
+              RESUMEN NÓMINA
             </button>
           </div>
         </header>
