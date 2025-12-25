@@ -30,6 +30,16 @@ export enum BonusStatus {
   PendingAuth = 'Pendiente de Autorización'
 }
 
+export interface VulcanNotification {
+  id: string;
+  employeeId: string;
+  title: string;
+  message: string;
+  date: string;
+  type: 'bonus' | 'info';
+  read: boolean;
+}
+
 export interface Employee {
   id: string;
   idNumber: string; // Cédula
@@ -42,6 +52,7 @@ export interface Employee {
   lastEvaluation: string;
   summary: string;
   kpis: KPI[];
+  notifications?: VulcanNotification[];
 }
 
 export interface FullEvaluation {

@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Employee } from '../types';
+import { Employee, BONUS_APPROVER } from '../types';
 import { generatePerformanceInsights } from '../services/geminiService';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer } from 'recharts';
 
@@ -37,6 +37,9 @@ const EmployeeDetails: React.FC<EmployeeDetailsProps> = ({ employee, onBack }) =
 
   const range = getIncreaseRange(overallScore);
 
+  // Verificar si tiene una notificación de bono aprobada por Jaquelin
+  const bonusApprovedNotification = employee.notifications?.find(n => n.type === 'bonus');
+
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       <button 
@@ -46,9 +49,37 @@ const EmployeeDetails: React.FC<EmployeeDetailsProps> = ({ employee, onBack }) =
         <span className="mr-2">←</span> Volver a Nómina
       </button>
 
+      {/* BANNER DE NOTIFICACIÓN DE BENEFICIO */}
+      {bonusApprovedNotification && (
+        <div className="bg-gradient-to-r from-[#003366] via-[#004a8f] to-[#003366] p-1 rounded-3xl animate-in slide-in-from-top-4 shadow-xl">
+           <div className="bg-white/5 backdrop-blur-sm rounded-[22px] p-6 flex items-center justify-between border border-white/20">
+              <div className="flex items-center space-x-6">
+                 <div className="w-16 h-16 bg-[#FFCC00] rounded-2xl flex items-center justify-center text-[#003366] text-3xl shadow-lg shadow-yellow-500/20 animate-pulse">
+                    🏆
+                 </div>
+                 <div>
+                    <h4 className="text-[#FFCC00] font-black text-xl tracking-tighter uppercase leading-tight">Notificación de Beneficio Autorizado</h4>
+                    <p className="text-white text-sm font-medium opacity-80 mt-1">{bonusApprovedNotification.message}</p>
+                 </div>
+              </div>
+              <div className="text-right">
+                 <p className="text-[10px] font-black text-[#FFCC00] uppercase tracking-widest">Firma Autorizada</p>
+                 <p className="text-white font-black text-xs uppercase italic">{BONUS_APPROVER}</p>
+                 <p className="text-[8px] text-white/40 font-mono mt-1">ID: {bonusApprovedNotification.id}</p>
+              </div>
+           </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Profile Card */}
-        <div className="lg:col-span-1 bg-white rounded-3xl shadow-sm border border-slate-100 p-8 text-center">
+        <div className="lg:col-span-1 bg-white rounded-3xl shadow-sm border border-slate-100 p-8 text-center relative overflow-hidden">
+          {bonusApprovedNotification && (
+             <div className="absolute top-0 right-0 p-4">
+                <div className="bg-[#FFCC00] text-[#003366] px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest shadow-md">Bono Activo</div>
+             </div>
+          )}
+          
           <img src={employee.photo} alt={employee.name} className="w-32 h-32 rounded-full mx-auto border-4 border-slate-50 shadow-lg grayscale" />
           <h3 className="mt-6 text-xl font-black text-slate-800 uppercase leading-tight">{employee.name}</h3>
           <p className="text-[#003366] font-black text-sm uppercase tracking-tighter mt-1">{employee.role}</p>
@@ -59,6 +90,15 @@ const EmployeeDetails: React.FC<EmployeeDetailsProps> = ({ employee, onBack }) =
                <span className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1">Estatus Salarial</span>
                <span className="font-black text-xs uppercase">{range.label}</span>
             </div>
+            
+            {bonusApprovedNotification && (
+               <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100 flex flex-col items-center">
+                  <span className="text-[10px] font-black uppercase text-emerald-600 tracking-widest opacity-60 mb-1">Autorización Dirección</span>
+                  <div className="flex items-center text-emerald-700 font-black text-[10px] uppercase">
+                     <span className="mr-2 text-lg">✅</span> FIRMADO POR {BONUS_APPROVER}
+                  </div>
+               </div>
+            )}
           </div>
 
           <div className="mt-8 p-6 bg-[#001a33] rounded-3xl text-white">

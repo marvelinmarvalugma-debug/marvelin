@@ -8,7 +8,7 @@ import EvaluationForm from './components/EvaluationForm';
 import AddEmployeeForm from './components/AddEmployeeForm';
 import MonthlyReportModal from './components/MonthlyReportModal';
 import { INITIAL_EMPLOYEES } from './constants';
-import { Employee, FullEvaluation, Department, AUTHORIZED_EVALUATORS, BONUS_APPROVER, BonusStatus } from './types';
+import { Employee, FullEvaluation, Department, AUTHORIZED_EVALUATORS, BONUS_APPROVER, BonusStatus, VulcanNotification } from './types';
 
 const App: React.FC = () => {
   const [currentEvaluator, setCurrentEvaluator] = useState<string | null>(null);
@@ -45,11 +45,34 @@ const App: React.FC = () => {
   };
 
   const handleApproveBonus = (employeeId: string) => {
+    const today = new Date().toLocaleDateString('es-ES');
+    
+    // 1. Actualizar historial de evaluaciones
     setEvaluationsHistory(prev => prev.map(ev => {
       if (ev.employeeId === employeeId && ev.condicionBono === BonusStatus.PendingAuth) {
         return { ...ev, condicionBono: BonusStatus.Approved, authorizedBy: BONUS_APPROVER };
       }
       return ev;
+    }));
+
+    // 2. Generar notificación para el empleado
+    setEmployees(prev => prev.map(emp => {
+      if (emp.id === employeeId) {
+        const newNotification: VulcanNotification = {
+          id: Math.random().toString(36).substr(2, 9),
+          employeeId: emp.id,
+          title: "¡BONO AUTORIZADO!",
+          message: `La Dirección General (${BONUS_APPROVER}) ha autorizado su bono de alto desempeño correspondiente a este período.`,
+          date: today,
+          type: 'bonus',
+          read: false
+        };
+        return {
+          ...emp,
+          notifications: [newNotification, ...(emp.notifications || [])]
+        };
+      }
+      return emp;
     }));
   };
 
@@ -95,10 +118,6 @@ const App: React.FC = () => {
               </button>
             ))}
           </div>
-          <p className="mt-8 text-[9px] text-slate-300 font-medium uppercase leading-relaxed">
-            Este sistema es para uso exclusivo de supervisores designados.<br/>
-            Cualquier acción será registrada bajo su firma digital.
-          </p>
         </div>
       </div>
     );
@@ -106,7 +125,7 @@ const App: React.FC = () => {
 
   const renderContent = () => {
     if (isAddingEmployee) return <div className="py-8"><AddEmployeeForm onAdd={(data) => {
-      const newEmp = { ...data, id: Math.random().toString(36).substr(2, 9), kpis: employees[0].kpis.map(k => ({...k, score: 0})), lastEvaluation: 'Pendiente', summary: '' };
+      const newEmp = { ...data, id: Math.random().toString(36).substr(2, 9), kpis: employees[0].kpis.map(k => ({...k, score: 0})), lastEvaluation: 'Pendiente', summary: '', notifications: [] };
       setEmployees(prev => [newEmp, ...prev]);
       setIsAddingEmployee(false);
     }} onCancel={() => setIsAddingEmployee(false)} /></div>;
@@ -122,7 +141,7 @@ const App: React.FC = () => {
         const batch = lines.map(l => {
           const p = l.split('\t');
           if (p.length < 2) return null;
-          return { id: Math.random().toString(36).substr(2, 9), idNumber: p[0], name: p[1], role: p[2] || 'TECNICO', department: Department.Operations, photo: `https://picsum.photos/seed/${p[0]}/200/200`, managerName: currentEvaluator, managerRole: 'Supervisor', lastEvaluation: 'Pendiente', summary: '', kpis: employees[0].kpis.map(k => ({...k, score: 0})) };
+          return { id: Math.random().toString(36).substr(2, 9), idNumber: p[0], name: p[1], role: p[2] || 'TECNICO', department: Department.Operations, photo: `https://picsum.photos/seed/${p[0]}/200/200`, managerName: currentEvaluator, managerRole: 'Supervisor', lastEvaluation: 'Pendiente', summary: '', kpis: employees[0].kpis.map(k => ({...k, score: 0})), notifications: [] };
         }).filter(Boolean) as Employee[];
         setEmployees(prev => [...batch, ...prev]);
       }} />;
@@ -147,7 +166,7 @@ const App: React.FC = () => {
                     {pending.map(ev => {
                       const emp = employees.find(e => e.id === ev.employeeId);
                       return (
-                        <div key={ev.employeeId} className="flex items-center justify-between p-6 bg-slate-50 rounded-3xl border border-slate-100">
+                        <div key={ev.employeeId} className="flex items-center justify-between p-6 bg-slate-50 rounded-3xl border border-slate-100 animate-in slide-in-from-left duration-300">
                           <div className="flex items-center space-x-4">
                              <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center font-black text-indigo-600">
                                {(ev.promedioFinal * 20).toFixed(0)}%

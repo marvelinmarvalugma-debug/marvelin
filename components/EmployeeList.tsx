@@ -103,13 +103,29 @@ const EmployeeList: React.FC<EmployeeListProps> = ({ employees, onSelect, onAddN
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {filteredEmployees.map(emp => {
           const score = Math.round(emp.kpis.reduce((acc, k) => acc + (k.score * k.weight / 100), 0));
+          const hasUnreadNotification = emp.notifications?.some(n => !n.read);
+          const hasBonusAuth = emp.notifications?.some(n => n.type === 'bonus');
+
           return (
             <div 
               key={emp.id}
               onClick={() => onSelect(emp)}
-              className="group bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:shadow-md hover:border-indigo-200 transition-all cursor-pointer relative overflow-hidden"
+              className={`group bg-white rounded-2xl p-6 shadow-sm border transition-all cursor-pointer relative overflow-hidden ${
+                hasBonusAuth ? 'border-[#FFCC00]/40' : 'border-slate-100 hover:border-indigo-200'
+              } hover:shadow-md`}
             >
-              <div className="absolute top-0 right-0 p-4">
+              {hasBonusAuth && (
+                 <div className="absolute top-0 left-0 bg-[#FFCC00] text-[#003366] text-[7px] font-black px-4 py-1 uppercase rotate-[-45deg] translate-x-[-15px] translate-y-[5px] shadow-sm">
+                   Beneficio
+                 </div>
+              )}
+
+              <div className="absolute top-0 right-0 p-4 flex items-center space-x-2">
+                 {hasUnreadNotification && (
+                    <div className="w-5 h-5 bg-[#FFCC00] rounded-full flex items-center justify-center text-[#003366] text-[10px] animate-bounce">
+                      🔔
+                    </div>
+                 )}
                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-[10px] font-bold border-2 ${
                    score > 90 ? 'border-indigo-400 bg-indigo-50 text-indigo-600' :
                    score > 0 ? 'border-emerald-400 bg-emerald-50 text-emerald-600' :
