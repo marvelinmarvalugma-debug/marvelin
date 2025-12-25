@@ -2,8 +2,7 @@
 import React, { useMemo } from 'react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend,
-  PieChart, Pie, Cell
+  PieChart, Pie, Cell, Legend
 } from 'recharts';
 import { Employee } from '../types';
 
@@ -16,6 +15,8 @@ const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 const Dashboard: React.FC<DashboardProps> = ({ employees }) => {
   const stats = useMemo(() => {
     const total = employees.length;
+    if (total === 0) return { total: 0, avgScore: 0, deptData: [], topPerformers: [] };
+
     const avgScore = employees.reduce((acc, emp) => {
       const score = emp.kpis.reduce((sum, kpi) => sum + kpi.score * (kpi.weight / 100), 0);
       return acc + score;
@@ -45,54 +46,55 @@ const Dashboard: React.FC<DashboardProps> = ({ employees }) => {
   return (
     <div className="space-y-6">
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-          <p className="text-slate-500 text-sm font-medium">Total Empleados</p>
-          <h3 className="text-3xl font-bold text-slate-800 mt-2">{stats.total}</h3>
-          <p className="text-xs text-emerald-600 mt-2 font-medium">↑ 12% desde el mes pasado</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+          <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Total Empleados</p>
+          <h3 className="text-3xl font-black text-slate-800 mt-2">{stats.total}</h3>
+          <p className="text-[10px] text-emerald-600 mt-2 font-black uppercase">↑ Vigentes en Nómina</p>
         </div>
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-          <p className="text-slate-500 text-sm font-medium">Promedio Desempeño</p>
-          <h3 className="text-3xl font-bold text-indigo-600 mt-2">{Math.round(stats.avgScore)}%</h3>
+        <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+          <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Promedio Desempeño</p>
+          <h3 className="text-3xl font-black text-indigo-600 mt-2">{Math.round(stats.avgScore)}%</h3>
           <div className="w-full bg-slate-100 h-1.5 rounded-full mt-4 overflow-hidden">
-            <div className="bg-indigo-600 h-full" style={{ width: `${stats.avgScore}%` }}></div>
+            <div className="bg-indigo-600 h-full transition-all duration-1000" style={{ width: `${stats.avgScore}%` }}></div>
           </div>
         </div>
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-          <p className="text-slate-500 text-sm font-medium">Evaluaciones Pendientes</p>
-          <h3 className="text-3xl font-bold text-amber-500 mt-2">5</h3>
-          <p className="text-xs text-slate-400 mt-2">Vence en 3 días</p>
+        <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+          <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Estado Operativo</p>
+          <h3 className="text-3xl font-black text-emerald-500 mt-2">100%</h3>
+          <p className="text-[10px] text-slate-400 mt-2 font-black uppercase">Seguridad SIHOA ✓</p>
         </div>
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-          <p className="text-slate-500 text-sm font-medium">Nivel de Satisfacción</p>
-          <h3 className="text-3xl font-bold text-slate-800 mt-2">4.8/5</h3>
-          <p className="text-xs text-emerald-600 mt-2 font-medium">Basado en encuestas 360°</p>
+        <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+          <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Meta Mensual</p>
+          <h3 className="text-3xl font-black text-slate-800 mt-2">95%</h3>
+          <p className="text-[10px] text-indigo-600 mt-2 font-black uppercase">Objetivo Vulcan</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Performance Chart */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-          <h4 className="text-lg font-semibold text-slate-800 mb-6">Puntuación General por Empleado</h4>
-          <div className="h-80 w-full">
+        <div className="bg-white p-4 lg:p-6 rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+          <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest mb-6 border-b pb-3">Puntuación por Empleado</h4>
+          <div className="h-64 lg:h-80 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 10, fontWeight: 'bold'}} />
+                <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 10}} />
                 <Tooltip 
-                  contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}}
+                  cursor={{fill: '#f8fafc'}}
+                  contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '10px', fontWeight: 'bold'}}
                 />
-                <Bar dataKey="score" fill="#6366f1" radius={[4, 4, 0, 0]} barSize={40} />
+                <Bar dataKey="score" fill="#003366" radius={[6, 6, 0, 0]} barSize={32} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Department Distribution */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-          <h4 className="text-lg font-semibold text-slate-800 mb-6">Distribución por Departamento</h4>
-          <div className="h-80 w-full flex items-center">
+        <div className="bg-white p-4 lg:p-6 rounded-3xl shadow-sm border border-slate-100">
+          <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest mb-6 border-b pb-3">Distribución por Área</h4>
+          <div className="h-64 lg:h-80 w-full flex items-center">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -100,7 +102,7 @@ const Dashboard: React.FC<DashboardProps> = ({ employees }) => {
                   cx="50%"
                   cy="50%"
                   innerRadius={60}
-                  outerRadius={100}
+                  outerRadius={80}
                   paddingAngle={5}
                   dataKey="value"
                 >
@@ -108,8 +110,8 @@ const Dashboard: React.FC<DashboardProps> = ({ employees }) => {
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip />
-                <Legend />
+                <Tooltip contentStyle={{borderRadius: '16px', border: 'none', fontSize: '10px', fontWeight: 'bold'}} />
+                <Legend iconType="circle" wrapperStyle={{fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase'}} />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -117,49 +119,47 @@ const Dashboard: React.FC<DashboardProps> = ({ employees }) => {
       </div>
 
       {/* Top Performers Table */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+      <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
         <div className="p-6 border-b border-slate-50 flex justify-between items-center">
-          <h4 className="text-lg font-semibold text-slate-800">Top Performers</h4>
-          <button className="text-indigo-600 text-sm font-medium hover:underline">Ver todos</button>
+          <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest">Cuadro de Honor</h4>
         </div>
-        <table className="w-full text-left">
-          <thead className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
-            <tr>
-              <th className="px-6 py-4">Empleado</th>
-              <th className="px-6 py-4">Rol</th>
-              <th className="px-6 py-4">Departamento</th>
-              <th className="px-6 py-4">Puntuación</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {stats.topPerformers.map(emp => (
-              <tr key={emp.id} className="hover:bg-slate-50/50 transition-colors">
-                <td className="px-6 py-4">
-                  <div className="flex items-center">
-                    <img src={emp.photo} alt={emp.name} className="w-8 h-8 rounded-full border border-slate-200" />
-                    <span className="ml-3 font-medium text-slate-700">{emp.name}</span>
-                  </div>
-                </td>
-                <td className="px-6 py-4 text-sm text-slate-600">{emp.role}</td>
-                <td className="px-6 py-4">
-                  <span className="px-2 py-1 bg-slate-100 text-slate-600 rounded-md text-xs font-medium">
-                    {emp.department}
-                  </span>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center">
-                    <span className="text-emerald-600 font-bold mr-2">
-                      {Math.round(emp.kpis.reduce((sum, kpi) => sum + kpi.score * (kpi.weight / 100), 0))}%
-                    </span>
-                    <div className="w-24 bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                      <div className="bg-emerald-500 h-full" style={{ width: `${emp.kpis.reduce((sum, kpi) => sum + kpi.score * (kpi.weight / 100), 0)}%` }}></div>
-                    </div>
-                  </div>
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead className="bg-slate-50 text-slate-500 text-[10px] font-black uppercase tracking-widest">
+              <tr>
+                <th className="px-6 py-4">Empleado</th>
+                <th className="px-6 py-4 hidden sm:table-cell">Rol</th>
+                <th className="px-6 py-4">Desempeño</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {stats.topPerformers.map(emp => (
+                <tr key={emp.id} className="hover:bg-slate-50/50 transition-colors">
+                  <td className="px-6 py-4">
+                    <div className="flex items-center">
+                      <img src={emp.photo} alt={emp.name} className="w-8 h-8 rounded-full border border-slate-200 grayscale" />
+                      <div className="ml-3">
+                        <p className="font-bold text-slate-700 text-xs uppercase">{emp.name.split(',')[0]}</p>
+                        <p className="sm:hidden text-[9px] text-slate-400 font-bold uppercase">{emp.role}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase hidden sm:table-cell">{emp.role}</td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center">
+                      <span className="text-indigo-600 font-black mr-2 text-xs">
+                        {Math.round(emp.kpis.reduce((sum, kpi) => sum + kpi.score * (kpi.weight / 100), 0))}%
+                      </span>
+                      <div className="w-16 lg:w-24 bg-slate-100 h-1 rounded-full overflow-hidden">
+                        <div className="bg-indigo-500 h-full" style={{ width: `${emp.kpis.reduce((sum, kpi) => sum + kpi.score * (kpi.weight / 100), 0)}%` }}></div>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
