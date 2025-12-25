@@ -26,7 +26,7 @@ export interface TechnicalCriterion {
 export enum BonusStatus {
   Approved = 'Aprobado',
   Conditioned = 'Condicionado a mejora',
-  NotApproved = 'No aprobado',
+  NotApproved = 'NO APROBADO',
   PendingAuth = 'Pendiente de Autorización'
 }
 

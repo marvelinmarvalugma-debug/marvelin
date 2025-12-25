@@ -30,10 +30,11 @@ const MonthlyReportModal: React.FC<MonthlyReportModalProps> = ({ evaluations, em
     const avgScore = filteredEvals.reduce((acc, e) => acc + (e.promedioFinal * 20), 0) / filteredEvals.length;
     const approvedBonuses = filteredEvals.filter(e => e.condicionBono === BonusStatus.Approved).length;
     const pendingAuths = filteredEvals.filter(e => e.condicionBono === BonusStatus.PendingAuth).length;
+    const notApprovedBonuses = filteredEvals.filter(e => e.condicionBono === BonusStatus.NotApproved).length;
     
     const topEvaluations = [...filteredEvals].sort((a, b) => b.promedioFinal - a.promedioFinal).slice(0, 5);
 
-    return { avgScore, approvedBonuses, pendingAuths, topEvaluations, total: filteredEvals.length };
+    return { avgScore, approvedBonuses, pendingAuths, notApprovedBonuses, topEvaluations, total: filteredEvals.length };
   }, [filteredEvals]);
 
   return (
@@ -99,70 +100,53 @@ const MonthlyReportModal: React.FC<MonthlyReportModalProps> = ({ evaluations, em
                   <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Bonos Aprobados</p>
                   <p className="text-4xl font-black text-emerald-600 mt-1">{stats.approvedBonuses}</p>
                 </div>
-                <div className="bg-amber-50 p-6 rounded-3xl border border-amber-100">
-                  <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Pendiente Firma</p>
-                  <p className="text-4xl font-black text-amber-600 mt-1">{stats.pendingAuths}</p>
-                </div>
-              </div>
-
-              {/* Top Performers del Mes */}
-              <div className="space-y-4">
-                <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center">
-                  <span className="w-8 h-8 rounded-lg bg-[#FFCC00] flex items-center justify-center mr-3">🏆</span>
-                  Top Desempeño Operativo
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                  {stats.topEvaluations.map((evalu, i) => {
-                    const emp = employees.find(e => e.id === evalu.employeeId);
-                    return (
-                      <div key={i} className="bg-white border p-4 rounded-2xl text-center space-y-1">
-                        <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center mx-auto text-[10px] font-black text-slate-400 mb-2">{i+1}</div>
-                        <p className="text-[10px] font-black text-slate-800 uppercase truncate">{emp?.name}</p>
-                        <p className="text-[14px] font-black text-[#003366]">{(evalu.promedioFinal * 20).toFixed(1)}%</p>
-                      </div>
-                    );
-                  })}
+                <div className="bg-rose-50 p-6 rounded-3xl border border-rose-100">
+                  <p className="text-[10px] font-black text-rose-400 uppercase tracking-widest">Bonos No Aprobados</p>
+                  <p className="text-4xl font-black text-rose-600 mt-1">{stats.notApprovedBonuses}</p>
                 </div>
               </div>
 
               {/* Listado Completo de Evaluaciones */}
               <div className="space-y-4">
-                <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest">Desglose Detallado</h4>
+                <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest">Desglose Detallado de Beneficios</h4>
                 <div className="border rounded-[32px] overflow-hidden bg-white shadow-sm">
                   <table className="w-full text-left text-xs">
                     <thead className="bg-slate-50 border-b">
                       <tr>
-                        <th className="px-6 py-4 font-black text-slate-400 uppercase tracking-widest">Cédula</th>
                         <th className="px-6 py-4 font-black text-slate-400 uppercase tracking-widest">Trabajador</th>
-                        <th className="px-6 py-4 font-black text-slate-400 uppercase tracking-widest">Cargo</th>
                         <th className="px-6 py-4 font-black text-slate-400 uppercase tracking-widest text-center">Score</th>
                         <th className="px-6 py-4 font-black text-slate-400 uppercase tracking-widest">Bono</th>
-                        <th className="px-6 py-4 font-black text-slate-400 uppercase tracking-widest">Evaluador</th>
+                        <th className="px-6 py-4 font-black text-slate-400 uppercase tracking-widest">Observación de Dirección</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y">
                       {filteredEvals.map((ev, idx) => {
                         const emp = employees.find(e => e.id === ev.employeeId);
+                        const isFailed = ev.promedioFinal * 20 < 80;
                         return (
                           <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                            <td className="px-6 py-4 font-bold text-slate-500">V-{emp?.idNumber}</td>
-                            <td className="px-6 py-4 font-black text-[#003366] uppercase">{emp?.name}</td>
-                            <td className="px-6 py-4 text-slate-400 font-bold uppercase truncate max-w-[150px]">{emp?.role}</td>
+                            <td className="px-6 py-4">
+                               <p className="font-black text-[#003366] uppercase">{emp?.name}</p>
+                               <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">V-{emp?.idNumber} | {emp?.role}</p>
+                            </td>
                             <td className="px-6 py-4 text-center">
-                               <span className={`px-2 py-1 rounded font-black ${ev.promedioFinal * 20 >= 80 ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-400'}`}>
+                               <span className={`px-3 py-1 rounded-full font-black ${isFailed ? 'bg-rose-100 text-rose-600' : 'bg-emerald-50 text-emerald-600'}`}>
                                  {(ev.promedioFinal * 20).toFixed(1)}%
                                </span>
                             </td>
                             <td className="px-6 py-4">
-                               <span className={`text-[9px] font-black uppercase px-2 py-1 rounded-full ${
-                                 ev.condicionBono === BonusStatus.Approved ? 'bg-emerald-50 text-emerald-600' :
-                                 ev.condicionBono === BonusStatus.PendingAuth ? 'bg-amber-50 text-amber-600' :
-                                 'bg-slate-50 text-slate-400'
+                               <span className={`text-[10px] font-black uppercase px-4 py-1.5 rounded-xl border-2 ${
+                                 ev.condicionBono === BonusStatus.Approved ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                 ev.condicionBono === BonusStatus.PendingAuth ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                                 ev.condicionBono === BonusStatus.NotApproved ? 'bg-rose-100 text-rose-700 border-rose-300' :
+                                 'bg-slate-50 text-slate-400 border-slate-100'
                                }`}>
                                  {ev.condicionBono}
                                </span>
                             </td>
-                            <td className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase">{ev.evaluador}</td>
+                            <td className="px-6 py-4 text-[10px] font-bold text-slate-500 italic">
+                               {isFailed ? "Puntaje insuficiente para asignación de incentivos." : (ev.authorizedBy ? `Aprobado por ${ev.authorizedBy}` : "Evaluación pendiente de firma final.")}
+                            </td>
                           </tr>
                         );
                       })}
