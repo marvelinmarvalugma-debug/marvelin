@@ -164,7 +164,10 @@ const App: React.FC = () => {
         }).filter(Boolean) as Employee[];
         
         // REQUERIMIENTO: Limpiar data anterior al hacer carga masiva
+        // Se limpian tanto los empleados como el historial de evaluaciones para evitar inconsistencias
         setEmployees(batch);
+        setEvaluationsHistory([]);
+        setActiveTab('employees');
       }} />;
       case 'evaluations':
         if (isJaquelin) {
@@ -180,7 +183,7 @@ const App: React.FC = () => {
                 <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-8">Solicitudes de Bono Pendientes ({pending.length})</h4>
                 {pending.length === 0 ? (
                   <div className="text-center py-10">
-                    <p className="text-slate-300 font-bold uppercase text-xs">No hay bonos pendientes de autorización técnica por ahora.</p>
+                    <p className="text-slate-300 font-bold uppercase text-xs"> No hay bonos pendientes de autorización técnica por ahora.</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
