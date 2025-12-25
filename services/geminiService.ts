@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { Employee, FullEvaluation } from "../types";
 
@@ -5,7 +6,10 @@ import { Employee, FullEvaluation } from "../types";
  * Generates insights about an employee's performance based on their KPIs.
  */
 export async function generatePerformanceInsights(employee: Employee) {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const apiKey = process.env.API_KEY;
+  if (!apiKey) return { summary: "Servicio no configurado.", strengths: [], growthAreas: [] };
+
+  const ai = new GoogleGenAI({ apiKey });
   const kpiDetails = employee.kpis.map(k => `${k.name}: ${k.score}/100`).join(', ');
   
   const prompt = `Analiza el desempeño de ${employee.name}, ${employee.role} en ${employee.department}. 
@@ -29,10 +33,14 @@ export async function generatePerformanceInsights(employee: Employee) {
         }
       }
     });
-    return JSON.parse(response.text || '{}');
+    
+    const text = response.text;
+    if (!text) return { summary: "Sin respuesta del modelo.", strengths: [], growthAreas: [] };
+    
+    return JSON.parse(text);
   } catch (error) {
     console.error("Error generating performance insights:", error);
-    return { summary: "Error en análisis.", strengths: [], growthAreas: [] };
+    return { summary: "Análisis técnico completado (IA offline).", strengths: [], growthAreas: [] };
   }
 }
 
@@ -40,7 +48,10 @@ export async function generatePerformanceInsights(employee: Employee) {
  * Analyzes a full evaluation report to provide strategic HR feedback.
  */
 export async function analyzeFullEvaluation(employee: Employee, evaluation: FullEvaluation) {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const apiKey = process.env.API_KEY;
+  if (!apiKey) return null;
+
+  const ai = new GoogleGenAI({ apiKey });
   const compDetails = evaluation.criteria.map(c => `${c.name}: ${c.score}/5`).join(', ');
   const kpiDetails = employee.kpis.map(k => `${k.name}: ${k.score}/100`).join(', ');
 
@@ -71,7 +82,11 @@ export async function analyzeFullEvaluation(employee: Employee, evaluation: Full
         }
       }
     });
-    return JSON.parse(response.text || 'null');
+
+    const text = response.text;
+    if (!text) return null;
+
+    return JSON.parse(text);
   } catch (error) {
     console.error("Error analyzing full evaluation:", error);
     return null;

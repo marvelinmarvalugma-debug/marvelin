@@ -38,7 +38,6 @@ const EvaluationForm: React.FC<EvaluationFormProps> = ({ employee, onClose, onSa
   const porcentajeDesempeño = (promedioFinalNum / 5) * 100;
 
   const getSalaryIncreaseRecommendation = (percentage: number) => {
-    // Nuevos rangos solicitados
     if (percentage >= 98) return { 
       text: "Incremento del 20% o más", 
       note: "Sujeto a consideración y aprobación del jefe (ING. GUSTAVO VULCAN)", 
@@ -75,30 +74,43 @@ const EvaluationForm: React.FC<EvaluationFormProps> = ({ employee, onClose, onSa
     if (criteriaPending > 0) return;
     
     setAnalyzing(true);
-    const finalBono = increaseInfo.requiresAuth ? BonusStatus.PendingAuth : bono;
-    
-    const evaluationData: FullEvaluation = {
-      employeeId: employee.id,
-      campo,
-      mes,
-      evaluador,
-      cargoEvaluador: "Evaluador Autorizado",
-      areaDesempeño: area,
-      criteria,
-      observaciones,
-      condicionBono: finalBono,
-      totalPuntos,
-      promedioFinal: promedioFinalNum,
-      date: new Date().toISOString().split('T')[0]
-    };
-    
-    const result = await analyzeFullEvaluation(employee, evaluationData);
-    if (result) {
-      setAiResult(result);
+    try {
+      const finalBono = increaseInfo.requiresAuth ? BonusStatus.PendingAuth : bono;
+      
+      const evaluationData: FullEvaluation = {
+        employeeId: employee.id,
+        campo,
+        mes,
+        evaluador,
+        cargoEvaluador: "Evaluador Autorizado",
+        areaDesempeño: area,
+        criteria,
+        observaciones,
+        condicionBono: finalBono,
+        totalPuntos,
+        promedioFinal: promedioFinalNum,
+        date: new Date().toISOString().split('T')[0]
+      };
+      
+      // Intentar obtener análisis de IA pero NO bloquear el flujo si falla
+      try {
+        const result = await analyzeFullEvaluation(employee, evaluationData);
+        if (result) {
+          setAiResult(result);
+        }
+      } catch (aiErr) {
+        console.warn("AI Analysis failed, proceeding with manual evaluation only.", aiErr);
+      }
+      
+      // GUARDAR SIEMPRE los datos humanos
       onSave(evaluationData);
+      setStep(4);
+    } catch (error) {
+      console.error("Critical error in processEvaluation:", error);
+      alert("Ocurrió un error al procesar el reporte. Inténtelo de nuevo.");
+    } finally {
+      setAnalyzing(false);
     }
-    setAnalyzing(false);
-    setStep(4);
   };
 
   return (
@@ -110,7 +122,7 @@ const EvaluationForm: React.FC<EvaluationFormProps> = ({ employee, onClose, onSa
             <h2 className="text-xl font-bold tracking-tight">VULCAN ENERGY TECHNOLOGY VENEZOLANA, C.A.</h2>
             <p className="text-xs opacity-80 mt-1 uppercase tracking-widest">Formato de Evaluación Mensual de Desempeño - Personal ATO</p>
           </div>
-          <div className="text-right">
+          <div className="text-right print:hidden">
             <span className="bg-white/20 px-3 py-1 rounded text-xs font-mono uppercase">PASO {step} / 4</span>
           </div>
         </div>
@@ -169,7 +181,7 @@ const EvaluationForm: React.FC<EvaluationFormProps> = ({ employee, onClose, onSa
             <div className="flex justify-between items-end border-b pb-2">
               <h4 className="text-lg font-bold text-slate-800">I. MATRIZ TÉCNICA Y OPERACIONAL</h4>
               <div className={`text-xs font-black px-3 py-1 rounded-full ${criteriaPending > 0 ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'}`}>
-                {criteriaPending > 0 ? `PENDIENTES: ${criteriaPending}` : 'LISTO PARA FINALIZAR'}
+                {criteriaPending > 0 ? `PENDIENTES: ${criteriaPending}` : 'LISTO PARA CONTINUAR'}
               </div>
             </div>
 
@@ -283,9 +295,9 @@ const EvaluationForm: React.FC<EvaluationFormProps> = ({ employee, onClose, onSa
                 <button 
                   onClick={processEvaluation} 
                   disabled={analyzing || criteriaPending > 0}
-                  className={`bg-[#FFCC00] text-[#003366] px-12 py-4 rounded-2xl font-black uppercase tracking-widest shadow-xl transition-all ${analyzing || criteriaPending > 0 ? 'opacity-30' : 'hover:scale-105 active:scale-95'}`}
+                  className={`bg-[#FFCC00] text-[#003366] px-12 py-4 rounded-2xl font-black uppercase tracking-widest shadow-xl transition-all ${analyzing || criteriaPending > 0 ? 'opacity-30 cursor-wait' : 'hover:scale-105 active:scale-95'}`}
                 >
-                  {analyzing ? 'ANALIZANDO REPORTE...' : 'FINALIZAR REPORTE VULCAN'}
+                  {analyzing ? 'PROCESANDO REPORTE VULCAN...' : 'FINALIZAR REPORTE VULCAN'}
                 </button>
               </div>
             </div>
@@ -314,7 +326,7 @@ const EvaluationForm: React.FC<EvaluationFormProps> = ({ employee, onClose, onSa
               </div>
             </div>
 
-            {aiResult && (
+            {aiResult ? (
               <div className="bg-white border-2 border-slate-100 p-8 rounded-[40px] space-y-6 shadow-sm">
                 <div className="flex items-center justify-between border-b pb-4">
                   <h5 className="font-black text-slate-800 text-sm uppercase tracking-widest">Insights Estratégicos IA</h5>
@@ -339,9 +351,14 @@ const EvaluationForm: React.FC<EvaluationFormProps> = ({ employee, onClose, onSa
                   </div>
                 </div>
               </div>
+            ) : (
+               <div className="bg-slate-50 border-2 border-dashed border-slate-200 p-8 rounded-[40px] text-center">
+                  <p className="text-slate-400 text-xs font-bold uppercase">Análisis de IA no disponible en este momento</p>
+                  <p className="text-slate-400 text-[10px] mt-1">El reporte técnico ha sido guardado correctamente.</p>
+               </div>
             )}
 
-            <div className="flex justify-center space-x-6 pt-6">
+            <div className="flex justify-center space-x-6 pt-6 print:hidden">
               <button onClick={onClose} className="px-8 py-3 text-slate-400 font-black uppercase text-xs tracking-widest hover:text-[#003366] transition-colors">Volver a Nómina</button>
               <button onClick={() => window.print()} className="bg-[#003366] text-white px-10 py-4 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-blue-900/20 hover:scale-105 active:scale-95 transition-all">
                 Generar Documento PDF 🖨
