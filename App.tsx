@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
 import EmployeeList from './components/EmployeeList';
@@ -8,9 +8,10 @@ import EvaluationForm from './components/EvaluationForm';
 import AddEmployeeForm from './components/AddEmployeeForm';
 import MonthlyReportModal from './components/MonthlyReportModal';
 import { INITIAL_EMPLOYEES } from './constants';
-import { Employee, FullEvaluation, KPI, Department } from './types';
+import { Employee, FullEvaluation, Department, AUTHORIZED_EVALUATORS } from './types';
 
 const App: React.FC = () => {
+  const [currentEvaluator, setCurrentEvaluator] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [employees, setEmployees] = useState<Employee[]>(INITIAL_EMPLOYEES);
   const [evaluationsHistory, setEvaluationsHistory] = useState<FullEvaluation[]>([]);
@@ -19,19 +20,22 @@ const App: React.FC = () => {
   const [isAddingEmployee, setIsAddingEmployee] = useState(false);
   const [showReportsModal, setShowReportsModal] = useState(false);
 
-  const handleSaveEvaluation = (evaluation: FullEvaluation) => {
-    // Guardar en el historial global para reportes mensuales
-    setEvaluationsHistory(prev => [...prev, evaluation]);
+  // Filtrar empleados según el evaluador actual
+  const filteredEmployees = useMemo(() => {
+    if (!currentEvaluator) return [];
+    // Jaquelin Naim puede ver a todos por ser la aprobatoria
+    if (currentEvaluator === "JAQUELIN NAIM") return employees;
+    return employees.filter(emp => emp.managerName === currentEvaluator);
+  }, [employees, currentEvaluator]);
 
-    // Actualizar estado actual del empleado
+  const handleSaveEvaluation = (evaluation: FullEvaluation) => {
+    setEvaluationsHistory(prev => [...prev, evaluation]);
     setEmployees(prev => prev.map(emp => 
       emp.id === evaluation.employeeId 
         ? { 
             ...emp, 
             lastEvaluation: evaluation.date,
-            kpis: emp.kpis.map(k => {
-              return { ...k, score: Math.round(evaluation.promedioFinal * 20) };
-            })
+            kpis: emp.kpis.map(k => ({ ...k, score: Math.round(evaluation.promedioFinal * 20) }))
           } 
         : emp
     ));
@@ -39,147 +43,127 @@ const App: React.FC = () => {
     setActiveTab('dashboard');
   };
 
-  const handleAddEmployee = (newEmpData: Omit<Employee, 'id' | 'kpis' | 'lastEvaluation' | 'summary'>) => {
-    const defaultKpis: KPI[] = [
-      { id: 'k1', name: 'Productividad', score: 0, weight: 40 },
-      { id: 'k2', name: 'Calidad Operativa', score: 0, weight: 30 },
-      { id: 'k3', name: 'Seguridad SIHOA', score: 0, weight: 30 }
-    ];
-
-    const newEmployee: Employee = {
-      ...newEmpData,
-      id: Math.random().toString(36).substr(2, 9),
-      kpis: defaultKpis,
-      lastEvaluation: 'Pendiente',
-      summary: 'Registro inicial de nómina.'
-    };
-
-    setEmployees(prev => [newEmployee, ...prev]);
-    setIsAddingEmployee(false);
-  };
-
-  const handleBulkAdd = (text: string) => {
-    const lines = text.split('\n');
-    const newBatch: Employee[] = [];
-    
-    lines.forEach((line) => {
-      const parts = line.split('\t');
-      if (parts.length >= 2) {
-        const idNumber = parts[0].trim();
-        const name = parts[1].trim();
-        const role = parts[2] ? parts[2].trim() : 'TECNICO';
-        
-        newBatch.push({
-          id: Math.random().toString(36).substr(2, 9),
-          idNumber,
-          name,
-          role,
-          department: Department.Operations,
-          photo: `https://picsum.photos/seed/${idNumber}/200/200`,
-          managerName: 'NELSON MARCANO',
-          managerRole: 'Supervisor Principal',
-          lastEvaluation: 'Pendiente',
-          summary: 'Importado de nómina masiva.',
-          kpis: [
-            { id: 'k1', name: 'Productividad', score: 0, weight: 40 },
-            { id: 'k2', name: 'Calidad Operativa', score: 0, weight: 30 },
-            { id: 'k3', name: 'Seguridad SIHOA', score: 0, weight: 30 }
-          ]
-        });
-      }
+  const employeesByDept = useMemo(() => {
+    const groups: Record<string, Employee[]> = {};
+    filteredEmployees.forEach(emp => {
+      if (!groups[emp.department]) groups[emp.department] = [];
+      groups[emp.department].push(emp);
     });
+    return groups;
+  }, [filteredEmployees]);
 
-    if (newBatch.length > 0) {
-      setEmployees(prev => [...newBatch, ...prev]);
-    }
+  const hasBeenEvaluatedThisMonth = (employeeId: string) => {
+    const currentMonth = new Date().toLocaleString('es-ES', { month: 'long' }).toLowerCase();
+    return evaluationsHistory.some(ev => ev.employeeId === employeeId && ev.mes.toLowerCase() === currentMonth);
   };
+
+  if (!currentEvaluator) {
+    return (
+      <div className="min-h-screen bg-[#001a33] flex items-center justify-center p-6">
+        <div className="bg-white rounded-[40px] shadow-2xl max-w-md w-full p-10 text-center animate-in zoom-in duration-500">
+          <h1 className="text-3xl font-black text-[#003366] tracking-tighter mb-2">VULCAN<span className="text-[#FFCC00]">HR</span></h1>
+          <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mb-8">Acceso de Evaluador Autorizado</p>
+          
+          <div className="space-y-3">
+            <p className="text-xs font-bold text-slate-500 uppercase mb-4">Seleccione su Identidad</p>
+            {AUTHORIZED_EVALUATORS.map(name => (
+              <button
+                key={name}
+                onClick={() => setCurrentEvaluator(name)}
+                className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl text-sm font-bold text-[#003366] hover:border-[#003366] hover:bg-blue-50 transition-all flex justify-between items-center group"
+              >
+                {name}
+                <span className="opacity-0 group-hover:opacity-100 text-[#FFCC00]">→</span>
+              </button>
+            ))}
+          </div>
+          <p className="mt-8 text-[9px] text-slate-300 font-medium uppercase leading-relaxed">
+            Este sistema es para uso exclusivo de supervisores designados.<br/>
+            Cualquier acción será registrada bajo su firma digital.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const renderContent = () => {
-    if (isAddingEmployee) {
-      return (
-        <div className="py-8">
-          <AddEmployeeForm onAdd={handleAddEmployee} onCancel={() => setIsAddingEmployee(false)} />
-        </div>
-      );
-    }
+    if (isAddingEmployee) return <div className="py-8"><AddEmployeeForm onAdd={(data) => {
+      const newEmp = { ...data, id: Math.random().toString(36).substr(2, 9), kpis: employees[0].kpis.map(k => ({...k, score: 0})), lastEvaluation: 'Pendiente', summary: '' };
+      setEmployees(prev => [newEmp, ...prev]);
+      setIsAddingEmployee(false);
+    }} onCancel={() => setIsAddingEmployee(false)} /></div>;
 
-    if (evaluatingEmployee) {
-      return (
-        <div className="py-8">
-           <EvaluationForm 
-            employee={evaluatingEmployee} 
-            onClose={() => setEvaluatingEmployee(null)}
-            onSave={handleSaveEvaluation}
-          />
-        </div>
-      );
-    }
+    if (evaluatingEmployee) return <div className="py-8"><EvaluationForm employee={evaluatingEmployee} evaluatorName={currentEvaluator} onClose={() => setEvaluatingEmployee(null)} onSave={handleSaveEvaluation} /></div>;
 
-    if (selectedEmployee) {
-      return (
-        <EmployeeDetails 
-          employee={selectedEmployee} 
-          onBack={() => setSelectedEmployee(null)} 
-        />
-      );
-    }
+    if (selectedEmployee) return <EmployeeDetails employee={selectedEmployee} onBack={() => setSelectedEmployee(null)} />;
 
     switch (activeTab) {
-      case 'dashboard':
-        return <Dashboard employees={employees} />;
-      case 'employees':
-        return (
-          <EmployeeList 
-            employees={employees} 
-            onSelect={(emp) => setSelectedEmployee(emp)} 
-            onAddNew={() => setIsAddingEmployee(true)}
-            onBulkAdd={handleBulkAdd}
-          />
-        );
+      case 'dashboard': return <Dashboard employees={filteredEmployees} />;
+      case 'employees': return <EmployeeList employees={filteredEmployees} onSelect={setSelectedEmployee} onAddNew={() => setIsAddingEmployee(true)} onBulkAdd={(text) => {
+        const lines = text.split('\n');
+        const batch = lines.map(l => {
+          const p = l.split('\t');
+          if (p.length < 2) return null;
+          return { id: Math.random().toString(36).substr(2, 9), idNumber: p[0], name: p[1], role: p[2] || 'TECNICO', department: Department.Operations, photo: `https://picsum.photos/seed/${p[0]}/200/200`, managerName: currentEvaluator, managerRole: 'Supervisor', lastEvaluation: 'Pendiente', summary: '', kpis: employees[0].kpis.map(k => ({...k, score: 0})) };
+        }).filter(Boolean) as Employee[];
+        setEmployees(prev => [...batch, ...prev]);
+      }} />;
       case 'evaluations':
         return (
-          <div className="space-y-6">
-            <div className="bg-white rounded-3xl p-10 shadow-sm border border-slate-100 flex flex-col md:flex-row items-center justify-between">
-              <div className="max-w-md">
-                <h3 className="text-3xl font-bold text-slate-800 tracking-tight">Matriz Mensual Vulcan</h3>
-                <p className="text-slate-500 mt-4 leading-relaxed">
-                  Utilice el formato oficial para evaluar el desempeño técnico del personal bajo su cargo.
-                </p>
-              </div>
-              <div className="mt-8 md:mt-0 opacity-50">
-                <img src="https://illustrations.popsy.co/white/performance-review.svg" alt="Eval" className="w-48 h-48" />
-              </div>
+          <div className="space-y-10">
+            <div className="bg-[#003366] rounded-[40px] p-10 text-white shadow-2xl relative overflow-hidden">
+               <div className="relative z-10 max-w-lg">
+                 <h3 className="text-3xl font-black tracking-tight uppercase">Matriz de Campo</h3>
+                 <p className="text-blue-200 mt-2 text-sm leading-relaxed">Bienvenido, <strong>{currentEvaluator}</strong>. Por favor, complete las evaluaciones mensuales por departamento.</p>
+               </div>
+               <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-20 -mt-20 blur-3xl"></div>
             </div>
 
-            <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
-              <div className="p-6 border-b border-slate-50 flex justify-between items-center">
-                <h4 className="font-bold text-slate-800">Seleccionar Personal para Evaluación</h4>
-                <span className="text-xs bg-slate-100 px-3 py-1 rounded-full font-bold text-slate-400">Total: {employees.length}</span>
+            {Object.keys(employeesByDept).length === 0 ? (
+              <div className="py-20 text-center bg-white rounded-[40px] border-2 border-dashed border-slate-100">
+                <p className="text-slate-400 font-bold uppercase">No tiene empleados asignados para evaluar.</p>
               </div>
-              <div className="divide-y divide-slate-50 max-h-[600px] overflow-y-auto">
-                {employees.map(emp => (
-                  <div key={emp.id} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
-                    <div className="flex items-center">
-                      <img src={emp.photo} className="w-10 h-10 rounded-full mr-4 object-cover grayscale" />
-                      <div>
-                        <p className="font-bold text-slate-800 text-sm uppercase">{emp.name}</p>
-                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{emp.role} • V-{emp.idNumber}</p>
-                      </div>
-                    </div>
-                    <button 
-                      onClick={() => setEvaluatingEmployee(emp)}
-                      className="text-[10px] font-black uppercase tracking-widest bg-[#003366] text-white px-5 py-2.5 rounded hover:bg-[#002244] transition-all"
-                    >
-                      Evaluar
-                    </button>
+            ) : (
+              Object.entries(employeesByDept).map(([dept, deptEmployees]) => (
+                <div key={dept} className="space-y-4">
+                  <div className="flex items-center space-x-4 px-4">
+                    <span className="w-2 h-8 bg-[#FFCC00] rounded-full"></span>
+                    <h4 className="text-xl font-black text-slate-800 uppercase tracking-tighter">Departamento: {dept}</h4>
+                    <span className="text-[10px] font-black bg-slate-200 text-slate-500 px-3 py-1 rounded-full">{deptEmployees.length} EMPLEADOS</span>
                   </div>
-                ))}
-              </div>
-            </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {deptEmployees.map(emp => {
+                      const evaluated = hasBeenEvaluatedThisMonth(emp.id);
+                      return (
+                        <div key={emp.id} className={`bg-white rounded-3xl p-6 border-2 transition-all ${evaluated ? 'border-emerald-100 opacity-60' : 'border-slate-50 shadow-sm hover:border-[#003366]'}`}>
+                          <div className="flex justify-between items-start mb-4">
+                            <img src={emp.photo} className="w-12 h-12 rounded-full grayscale" />
+                            {evaluated ? (
+                              <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full uppercase">Evaluado ✓</span>
+                            ) : (
+                              <span className="text-[9px] font-black text-amber-600 bg-amber-50 px-3 py-1 rounded-full uppercase">Pendiente</span>
+                            )}
+                          </div>
+                          <h5 className="font-bold text-slate-800 uppercase text-sm truncate">{emp.name}</h5>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase">{emp.role}</p>
+                          <button 
+                            disabled={evaluated}
+                            onClick={() => setEvaluatingEmployee(emp)}
+                            className={`w-full mt-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${evaluated ? 'bg-slate-100 text-slate-400' : 'bg-[#003366] text-white hover:bg-[#002244] shadow-lg shadow-blue-900/10'}`}
+                          >
+                            {evaluated ? 'Reporte Listo' : 'Iniciar Evaluación'}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         );
-      default:
-        return <Dashboard employees={employees} />;
+      default: return <Dashboard employees={filteredEmployees} />;
     }
   };
 
@@ -188,16 +172,11 @@ const App: React.FC = () => {
       activeTab={evaluatingEmployee || isAddingEmployee ? 'evaluations' : activeTab} 
       setActiveTab={setActiveTab}
       onDownloadReports={() => setShowReportsModal(true)}
+      evaluatorName={currentEvaluator}
+      onChangeEvaluator={() => setCurrentEvaluator(null)}
     >
       {renderContent()}
-      
-      {showReportsModal && (
-        <MonthlyReportModal 
-          evaluations={evaluationsHistory} 
-          employees={employees}
-          onClose={() => setShowReportsModal(false)} 
-        />
-      )}
+      {showReportsModal && <MonthlyReportModal evaluations={evaluationsHistory} employees={employees} onClose={() => setShowReportsModal(false)} />}
     </Layout>
   );
 };

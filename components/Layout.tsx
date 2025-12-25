@@ -6,9 +6,18 @@ interface LayoutProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   onDownloadReports?: () => void;
+  evaluatorName?: string | null;
+  onChangeEvaluator?: () => void;
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, onDownloadReports }) => {
+const Layout: React.FC<LayoutProps> = ({ 
+  children, 
+  activeTab, 
+  setActiveTab, 
+  onDownloadReports,
+  evaluatorName,
+  onChangeEvaluator
+}) => {
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: '📊' },
     { id: 'employees', label: 'Personal', icon: '👥' },
@@ -41,15 +50,27 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, onDo
           ))}
         </nav>
 
-        <div className="p-6 border-t border-white/5">
-          <div className="flex items-center p-3 bg-white/5 rounded-xl">
-            <div className="w-8 h-8 rounded-full bg-[#FFCC00] flex items-center justify-center text-[#003366] text-xs font-black">V</div>
-            <div className="ml-3 overflow-hidden">
-              <p className="text-xs font-bold truncate">SOPORTE LEGAL</p>
-              <p className="text-[10px] text-slate-500 truncate">legal@vulcanlatin.com</p>
+        {evaluatorName && (
+          <div className="p-6 border-t border-white/5">
+            <div className="p-4 bg-white/5 rounded-2xl border border-white/10 group relative">
+              <div className="flex items-center">
+                <div className="w-10 h-10 rounded-full bg-[#FFCC00] flex items-center justify-center text-[#003366] text-xs font-black">
+                  {evaluatorName.split(' ')[0][0]}
+                </div>
+                <div className="ml-3 overflow-hidden">
+                  <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Evaluador</p>
+                  <p className="text-xs font-bold truncate text-white uppercase">{evaluatorName}</p>
+                </div>
+              </div>
+              <button 
+                onClick={onChangeEvaluator}
+                className="mt-3 w-full text-[9px] font-black uppercase text-[#FFCC00] hover:text-white transition-colors border border-[#FFCC00]/30 py-1 rounded-lg"
+              >
+                Cambiar Usuario
+              </button>
             </div>
           </div>
-        </div>
+        )}
       </aside>
 
       {/* Main Content */}
@@ -57,18 +78,18 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, onDo
         <header className="sticky top-0 z-10 bg-white shadow-sm border-b border-slate-200 px-8 py-4 flex justify-between items-center print:hidden">
           <div>
             <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest">{activeTab}</h2>
-            <p className="text-lg font-bold text-slate-800">Panel de Control</p>
+            <p className="text-lg font-bold text-slate-800">Panel de Operaciones</p>
           </div>
           <div className="flex items-center space-x-6">
             <div className="hidden md:flex flex-col text-right">
-              <span className="text-xs font-bold text-slate-800">Admin Vulcan</span>
-              <span className="text-[10px] text-emerald-500 font-bold">● SISTEMA ACTIVO</span>
+              <span className="text-xs font-bold text-slate-800 uppercase">{evaluatorName || 'SISTEMA'}</span>
+              <span className="text-[10px] text-emerald-500 font-bold uppercase tracking-widest">● Sesión Autorizada</span>
             </div>
             <button 
               onClick={onDownloadReports}
               className="bg-[#003366] text-white px-5 py-2 rounded font-bold text-xs hover:bg-[#002244] transition-all shadow-lg shadow-blue-900/10"
             >
-              DESCARGAR REPORTES
+              REPORTES PDF
             </button>
           </div>
         </header>

@@ -60,15 +60,16 @@ export interface FullEvaluation {
   authorizedBy?: string;
 }
 
-// Lista oficial de evaluadores autorizados (6)
+// Lista oficial actualizada de evaluadores autorizados
 export const AUTHORIZED_EVALUATORS = [
   "NELSON MARCANO",
-  "JOSE MEDINA",
-  "RAFAEL CAMPOS",
-  "FREDDY MAITA",
-  "ANGEL URPIN",
-  "RONALD RODRIGUEZ"
+  "DANIEL FARRERA",
+  "JOSE VILLARROEL",
+  "HUGO PEÑA",
+  "ROMER VASQUEZ",
+  "ROGER VASQUEZ",
+  "JAQUELIN NAIM"
 ];
 
-// Único autorizador de bonos
-export const BONUS_APPROVER = "ING. GUSTAVO VULCAN (DIRECTOR)";
+// Único autorizador de bonos actualizado
+export const BONUS_APPROVER = "JAQUELIN NAIM";
