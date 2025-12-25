@@ -125,9 +125,14 @@ const EmployeeList: React.FC<EmployeeListProps> = ({ employees, onSelect, onAddN
                 <p className="text-[10px] text-slate-500 font-black mt-1">V-{emp.idNumber}</p>
                 <p className="text-[10px] text-indigo-600 font-bold uppercase tracking-wide mt-0.5">{emp.role}</p>
                 
+                <div className="mt-2 flex flex-col items-center">
+                  <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Evaluador</span>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase">{emp.managerName}</span>
+                </div>
+
                 <div className="mt-4 w-full pt-4 border-t border-slate-50">
                   <div className="flex justify-between text-[9px] text-slate-400 font-bold uppercase mb-2">
-                    <span>Evaluación Actual</span>
+                    <span>Desempeño</span>
                     <span>{score}/100</span>
                   </div>
                   <div className="w-full bg-slate-50 h-1.5 rounded-full overflow-hidden">
@@ -138,7 +143,7 @@ const EmployeeList: React.FC<EmployeeListProps> = ({ employees, onSelect, onAddN
                   </div>
                 </div>
 
-                <button className="mt-6 text-[10px] text-[#003366] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
+                <button className="mt-4 text-[10px] text-[#003366] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
                   Abrir Expediente →
                 </button>
               </div>
