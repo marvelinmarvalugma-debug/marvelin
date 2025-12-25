@@ -33,8 +33,9 @@ const MonthlyReportModal: React.FC<MonthlyReportModalProps> = ({ evaluations, em
     const notApprovedBonuses = filteredEvals.filter(e => e.condicionBono === BonusStatus.NotApproved).length;
     
     const topEvaluations = [...filteredEvals].sort((a, b) => b.promedioFinal - a.promedioFinal).slice(0, 5);
+    const evaluationYear = filteredEvals[0]?.año || new Date().getFullYear().toString();
 
-    return { avgScore, approvedBonuses, pendingAuths, notApprovedBonuses, topEvaluations, total: filteredEvals.length };
+    return { avgScore, approvedBonuses, pendingAuths, notApprovedBonuses, topEvaluations, total: filteredEvals.length, year: evaluationYear };
   }, [filteredEvals]);
 
   return (
@@ -74,7 +75,7 @@ const MonthlyReportModal: React.FC<MonthlyReportModalProps> = ({ evaluations, em
             </div>
             <div className="text-right">
               <p className="text-[10px] font-black text-slate-400 uppercase">Período Fiscal</p>
-              <p className="text-xl font-black text-[#003366] uppercase">{selectedMonth} 2024</p>
+              <p className="text-xl font-black text-[#003366] uppercase">{selectedMonth} {stats?.year || ''}</p>
             </div>
           </div>
 
@@ -108,7 +109,7 @@ const MonthlyReportModal: React.FC<MonthlyReportModalProps> = ({ evaluations, em
 
               {/* Listado Completo de Evaluaciones */}
               <div className="space-y-4">
-                <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest">Desglose Detallado de Beneficios</h4>
+                <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest">Desglose Detallado de Beneficios ({stats.year})</h4>
                 <div className="border rounded-[32px] overflow-hidden bg-white shadow-sm">
                   <table className="w-full text-left text-xs">
                     <thead className="bg-slate-50 border-b">

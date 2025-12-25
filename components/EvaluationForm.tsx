@@ -21,6 +21,7 @@ const EvaluationForm: React.FC<EvaluationFormProps> = ({ employee, evaluatorName
   const [step, setStep] = useState(1);
   const [campo, setCampo] = useState('Cariña');
   const [mes, setMes] = useState(new Date().toLocaleString('es-ES', { month: 'long' }));
+  const [anio, setAnio] = useState(new Date().getFullYear().toString());
   const [area, setArea] = useState<'Operativa' | 'Administrativa'>('Operativa');
   const [criteria, setCriteria] = useState<TechnicalCriterion[]>(
     VULCAN_CRITERIA.map(c => ({ ...c, score: 0 }))
@@ -41,7 +42,6 @@ const EvaluationForm: React.FC<EvaluationFormProps> = ({ employee, evaluatorName
     if (percentage >= 98) return { text: "Incremento del 20% o más", note: "Sujeto a aprobación de Jefe", color: "text-indigo-600 bg-indigo-50 border-indigo-200", requiresAuth: true };
     if (percentage >= 88) return { text: "Incremento del 15%", note: "Desempeño Sobresaliente", color: "text-emerald-600 bg-emerald-50 border-emerald-200", requiresAuth: false };
     if (percentage >= 80) return { text: "Incremento del 10%", note: "Cumple Expectativas", color: "text-blue-600 bg-blue-50 border-blue-200", requiresAuth: false };
-    // Caso solicitado: Por debajo del 80%
     return { text: "No recibe beneficio", note: "Puntuación insuficiente (inferior al 80%)", color: "text-rose-600 bg-rose-50 border-rose-200", requiresAuth: false };
   };
 
@@ -59,6 +59,7 @@ const EvaluationForm: React.FC<EvaluationFormProps> = ({ employee, evaluatorName
         employeeId: employee.id,
         campo,
         mes,
+        año: anio,
         evaluador: evaluatorName,
         cargoEvaluador: "Evaluador Autorizado",
         areaDesempeño: area,
@@ -123,9 +124,15 @@ const EvaluationForm: React.FC<EvaluationFormProps> = ({ employee, evaluatorName
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Campo / Estación</label>
                 <input value={campo} onChange={e => setCampo(e.target.value)} className="w-full p-4 border-2 rounded-2xl bg-slate-50 font-bold uppercase text-[#003366] outline-none" />
               </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Mes</label>
-                <input value={mes} onChange={e => setMes(e.target.value)} className="w-full p-4 border-2 rounded-2xl bg-slate-50 font-bold uppercase text-[#003366] outline-none" />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Mes</label>
+                  <input value={mes} onChange={e => setMes(e.target.value)} className="w-full p-4 border-2 rounded-2xl bg-slate-50 font-bold uppercase text-[#003366] outline-none" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Año</label>
+                  <input value={anio} onChange={e => setAnio(e.target.value)} className="w-full p-4 border-2 rounded-2xl bg-slate-50 font-bold uppercase text-[#003366] outline-none" />
+                </div>
               </div>
             </div>
             <div className="pt-6 flex justify-end">

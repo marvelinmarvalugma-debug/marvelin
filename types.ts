@@ -59,6 +59,7 @@ export interface FullEvaluation {
   employeeId: string;
   campo: string;
   mes: string;
+  año: string;
   evaluador: string;
   cargoEvaluador: string;
   areaDesempeño: 'Operativa' | 'Administrativa';
