@@ -26,7 +26,8 @@ export interface TechnicalCriterion {
 export enum BonusStatus {
   Approved = 'Aprobado',
   Conditioned = 'Condicionado a mejora',
-  NotApproved = 'No aprobado'
+  NotApproved = 'No aprobado',
+  PendingAuth = 'Pendiente de Autorización'
 }
 
 export interface Employee {
@@ -56,4 +57,18 @@ export interface FullEvaluation {
   totalPuntos: number;
   promedioFinal: number;
   date: string;
+  authorizedBy?: string;
 }
+
+// Lista oficial de evaluadores autorizados (6)
+export const AUTHORIZED_EVALUATORS = [
+  "NELSON MARCANO",
+  "JOSE MEDINA",
+  "RAFAEL CAMPOS",
+  "FREDDY MAITA",
+  "ANGEL URPIN",
+  "RONALD RODRIGUEZ"
+];
+
+// Único autorizador de bonos
+export const BONUS_APPROVER = "ING. GUSTAVO VULCAN (DIRECTOR)";
