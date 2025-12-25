@@ -41,7 +41,7 @@ const App: React.FC = () => {
       emp.id === evaluation.employeeId 
         ? { 
             ...emp, 
-            lastEvaluation: evaluation.date,
+            lastEvaluation: `${evaluation.mes} ${evaluation.año}`,
             kpis: emp.kpis.map(k => ({ ...k, score: Math.round(evaluation.promedioFinal * 20) }))
           } 
         : emp
@@ -93,7 +93,12 @@ const App: React.FC = () => {
 
   const hasBeenEvaluatedThisMonth = (employeeId: string) => {
     const currentMonth = new Date().toLocaleString('es-ES', { month: 'long' }).toLowerCase();
-    return evaluationsHistory.some(ev => ev.employeeId === employeeId && ev.mes.toLowerCase() === currentMonth);
+    const currentYear = new Date().getFullYear().toString();
+    return evaluationsHistory.some(ev => 
+      ev.employeeId === employeeId && 
+      ev.mes.toLowerCase() === currentMonth &&
+      ev.año === currentYear
+    );
   };
 
   const getPendingApprovals = () => {

@@ -17,11 +17,17 @@ interface AIResult {
   trainingRecommendation: string;
 }
 
+const MESES = [
+  "enero", "febrero", "marzo", "abril", "mayo", "junio",
+  "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"
+];
+
 const EvaluationForm: React.FC<EvaluationFormProps> = ({ employee, evaluatorName, onClose, onSave }) => {
+  const currentYear = new Date().getFullYear();
   const [step, setStep] = useState(1);
   const [campo, setCampo] = useState('Cariña');
-  const [mes, setMes] = useState(new Date().toLocaleString('es-ES', { month: 'long' }));
-  const [anio, setAnio] = useState(new Date().getFullYear().toString());
+  const [mes, setMes] = useState(new Date().toLocaleString('es-ES', { month: 'long' }).toLowerCase());
+  const [anio, setAnio] = useState(currentYear.toString());
   const [area, setArea] = useState<'Operativa' | 'Administrativa'>('Operativa');
   const [criteria, setCriteria] = useState<TechnicalCriterion[]>(
     VULCAN_CRITERIA.map(c => ({ ...c, score: 0 }))
@@ -30,6 +36,10 @@ const EvaluationForm: React.FC<EvaluationFormProps> = ({ employee, evaluatorName
   const [bono, setBono] = useState<BonusStatus>(BonusStatus.Approved);
   const [analyzing, setAnalyzing] = useState(false);
   const [aiResult, setAiResult] = useState<AIResult | null>(null);
+
+  const yearsOptions = useMemo(() => {
+    return [currentYear - 1, currentYear, currentYear + 1].map(String);
+  }, [currentYear]);
 
   const totalPuntos = criteria.reduce((acc, curr) => acc + curr.score, 0);
   const criteriaPending = criteria.filter(c => c.score === 0).length;
@@ -122,22 +132,38 @@ const EvaluationForm: React.FC<EvaluationFormProps> = ({ employee, evaluatorName
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Campo / Estación</label>
-                <input value={campo} onChange={e => setCampo(e.target.value)} className="w-full p-4 border-2 rounded-2xl bg-slate-50 font-bold uppercase text-[#003366] outline-none" />
+                <input value={campo} onChange={e => setCampo(e.target.value)} className="w-full p-4 border-2 rounded-2xl bg-slate-50 font-bold uppercase text-[#003366] outline-none focus:border-[#003366] transition-all" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Mes</label>
-                  <input value={mes} onChange={e => setMes(e.target.value)} className="w-full p-4 border-2 rounded-2xl bg-slate-50 font-bold uppercase text-[#003366] outline-none" />
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Mes de Evaluación</label>
+                  <select 
+                    value={mes} 
+                    onChange={e => setMes(e.target.value)} 
+                    className="w-full p-4 border-2 rounded-2xl bg-slate-50 font-bold uppercase text-[#003366] outline-none focus:border-[#003366] cursor-pointer"
+                  >
+                    {MESES.map(m => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Año</label>
-                  <input value={anio} onChange={e => setAnio(e.target.value)} className="w-full p-4 border-2 rounded-2xl bg-slate-50 font-bold uppercase text-[#003366] outline-none" />
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Año Fiscal</label>
+                  <select 
+                    value={anio} 
+                    onChange={e => setAnio(e.target.value)} 
+                    className="w-full p-4 border-2 rounded-2xl bg-slate-50 font-bold uppercase text-[#003366] outline-none focus:border-[#003366] cursor-pointer"
+                  >
+                    {yearsOptions.map(y => (
+                      <option key={y} value={y}>{y}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
             </div>
             <div className="pt-6 flex justify-end">
               <button onClick={() => setStep(2)} className="bg-[#003366] text-white px-10 py-4 rounded-2xl font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-blue-900/10">
-                Siguiente: Matriz →
+                Siguiente: Matriz Técnica →
               </button>
             </div>
           </div>
@@ -180,7 +206,7 @@ const EvaluationForm: React.FC<EvaluationFormProps> = ({ employee, evaluatorName
             </div>
             <div className="flex justify-between items-center bg-[#001a33] p-8 rounded-[32px] text-white">
                <div>
-                  <p className="text-[10px] font-black opacity-40 uppercase tracking-widest">Puntaje Final</p>
+                  <p className="text-[10px] font-black opacity-40 uppercase tracking-widest">Puntaje Final ({porcentajeDesempeño.toFixed(1)}%)</p>
                   <p className={`text-4xl font-black ${porcentajeDesempeño < 80 ? 'text-rose-400' : 'text-[#FFCC00]'}`}>{porcentajeDesempeño.toFixed(1)}%</p>
                </div>
                <div className="flex space-x-4">
@@ -238,7 +264,7 @@ const EvaluationForm: React.FC<EvaluationFormProps> = ({ employee, evaluatorName
                    {porcentajeDesempeño < 80 ? 'Evaluación Crítica' : 'Registro Exitoso'}
                 </h3>
                 <p className={`font-bold uppercase text-[10px] mt-2 tracking-widest ${porcentajeDesempeño < 80 ? 'text-rose-600' : 'text-emerald-600'}`}>
-                   Firmado Digitalmente por {evaluatorName}
+                   Firmado Digitalmente por {evaluatorName} para el periodo {mes} {anio}
                 </p>
              </div>
              
