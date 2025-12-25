@@ -32,7 +32,8 @@ const EmployeeDetails: React.FC<EmployeeDetailsProps> = ({ employee, onBack }) =
     if (score >= 98) return { label: "Potencial: +20% (Aprob. Jefe)", color: "bg-indigo-500", text: "text-indigo-700" };
     if (score >= 88) return { label: "Potencial: +15% Incremento", color: "bg-emerald-500", text: "text-emerald-700" };
     if (score >= 80) return { label: "Potencial: +10% Incremento", color: "bg-blue-500", text: "text-blue-700" };
-    return { label: "Sin elegibilidad de incremento", color: "bg-slate-300", text: "text-slate-500" };
+    // Caso solicitado: Por debajo del 80%
+    return { label: "No recibe beneficio", color: "bg-rose-500", text: "text-rose-700" };
   };
 
   const range = getIncreaseRange(overallScore);
@@ -99,11 +100,18 @@ const EmployeeDetails: React.FC<EmployeeDetailsProps> = ({ employee, onBack }) =
                   </div>
                </div>
             )}
+
+            {overallScore < 80 && (
+               <div className="p-4 bg-rose-50 rounded-2xl border border-rose-100 flex flex-col items-center">
+                  <span className="text-[10px] font-black uppercase text-rose-600 tracking-widest opacity-60 mb-1">Nota de Desempeño</span>
+                  <p className="text-rose-700 font-bold text-[10px] uppercase leading-tight">Requiere Plan de Mejora Inmediato</p>
+               </div>
+            )}
           </div>
 
-          <div className="mt-8 p-6 bg-[#001a33] rounded-3xl text-white">
+          <div className={`mt-8 p-6 rounded-3xl text-white ${overallScore < 80 ? 'bg-rose-900' : 'bg-[#001a33]'}`}>
             <p className="text-slate-400 text-[10px] uppercase font-bold tracking-[0.2em] mb-1">Puntaje Desempeño</p>
-            <h4 className="text-5xl font-black text-[#FFCC00]">{overallScore}%</h4>
+            <h4 className={`text-5xl font-black ${overallScore < 80 ? 'text-white' : 'text-[#FFCC00]'}`}>{overallScore}%</h4>
             <p className="text-[10px] mt-4 text-slate-400 uppercase font-black">Vulcan Energy Technology</p>
           </div>
         </div>
@@ -120,8 +128,8 @@ const EmployeeDetails: React.FC<EmployeeDetailsProps> = ({ employee, onBack }) =
                   <Radar
                     name={employee.name}
                     dataKey="A"
-                    stroke="#003366"
-                    fill="#003366"
+                    stroke={overallScore < 80 ? "#e11d48" : "#003366"}
+                    fill={overallScore < 80 ? "#e11d48" : "#003366"}
                     fillOpacity={0.6}
                   />
                 </RadarChart>
@@ -147,7 +155,7 @@ const EmployeeDetails: React.FC<EmployeeDetailsProps> = ({ employee, onBack }) =
 
             {aiAnalysis ? (
               <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
-                <div className="p-5 bg-slate-50 border-l-4 border-[#003366] rounded-r-xl text-slate-700 leading-relaxed text-sm italic">
+                <div className={`p-5 border-l-4 rounded-r-xl text-slate-700 leading-relaxed text-sm italic ${overallScore < 80 ? 'bg-rose-50 border-rose-500' : 'bg-slate-50 border-[#003366]'}`}>
                   "{aiAnalysis.summary}"
                 </div>
                 

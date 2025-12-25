@@ -41,7 +41,8 @@ const EvaluationForm: React.FC<EvaluationFormProps> = ({ employee, evaluatorName
     if (percentage >= 98) return { text: "Incremento del 20% o más", note: "Sujeto a aprobación de Jefe", color: "text-indigo-600 bg-indigo-50 border-indigo-200", requiresAuth: true };
     if (percentage >= 88) return { text: "Incremento del 15%", note: "Desempeño Sobresaliente", color: "text-emerald-600 bg-emerald-50 border-emerald-200", requiresAuth: false };
     if (percentage >= 80) return { text: "Incremento del 10%", note: "Cumple Expectativas", color: "text-blue-600 bg-blue-50 border-blue-200", requiresAuth: false };
-    return { text: "Sin incremento", note: "Por debajo del 80%", color: "text-slate-500 bg-slate-50 border-slate-200", requiresAuth: false };
+    // Caso solicitado: Por debajo del 80%
+    return { text: "No recibe beneficio", note: "Puntuación insuficiente (inferior al 80%)", color: "text-rose-600 bg-rose-50 border-rose-200", requiresAuth: false };
   };
 
   const increaseInfo = getSalaryIncreaseRecommendation(porcentajeDesempeño);
@@ -63,7 +64,7 @@ const EvaluationForm: React.FC<EvaluationFormProps> = ({ employee, evaluatorName
         areaDesempeño: area,
         criteria,
         observaciones,
-        condicionBono: increaseInfo.requiresAuth ? BonusStatus.PendingAuth : bono,
+        condicionBono: porcentajeDesempeño < 80 ? BonusStatus.NotApproved : (increaseInfo.requiresAuth ? BonusStatus.PendingAuth : bono),
         totalPuntos,
         promedioFinal: promedioFinalNum,
         date: new Date().toISOString().split('T')[0]
@@ -173,7 +174,7 @@ const EvaluationForm: React.FC<EvaluationFormProps> = ({ employee, evaluatorName
             <div className="flex justify-between items-center bg-[#001a33] p-8 rounded-[32px] text-white">
                <div>
                   <p className="text-[10px] font-black opacity-40 uppercase tracking-widest">Puntaje Final</p>
-                  <p className="text-4xl font-black text-[#FFCC00]">{porcentajeDesempeño.toFixed(1)}%</p>
+                  <p className={`text-4xl font-black ${porcentajeDesempeño < 80 ? 'text-rose-400' : 'text-[#FFCC00]'}`}>{porcentajeDesempeño.toFixed(1)}%</p>
                </div>
                <div className="flex space-x-4">
                   <button onClick={() => setStep(1)} className="px-6 py-3 font-black uppercase text-[10px] text-slate-400">Regresar</button>
@@ -222,10 +223,16 @@ const EvaluationForm: React.FC<EvaluationFormProps> = ({ employee, evaluatorName
 
         {step === 4 && (
           <div className="space-y-8 animate-in zoom-in duration-500">
-             <div className="bg-emerald-50 p-12 rounded-[40px] text-center border border-emerald-100">
-                <div className="w-24 h-24 bg-emerald-500 rounded-full flex items-center justify-center text-white text-4xl mx-auto mb-6 shadow-xl border-8 border-white">✓</div>
-                <h3 className="text-4xl font-black text-emerald-900 tracking-tighter uppercase">Registro Exitoso</h3>
-                <p className="text-emerald-600 font-bold uppercase text-[10px] mt-2 tracking-widest">Firmado Digitalmente por {evaluatorName}</p>
+             <div className={`p-12 rounded-[40px] text-center border ${porcentajeDesempeño < 80 ? 'bg-rose-50 border-rose-100' : 'bg-emerald-50 border-emerald-100'}`}>
+                <div className={`w-24 h-24 rounded-full flex items-center justify-center text-white text-4xl mx-auto mb-6 shadow-xl border-8 border-white ${porcentajeDesempeño < 80 ? 'bg-rose-500' : 'bg-emerald-500'}`}>
+                   {porcentajeDesempeño < 80 ? '!' : '✓'}
+                </div>
+                <h3 className={`text-4xl font-black tracking-tighter uppercase ${porcentajeDesempeño < 80 ? 'text-rose-900' : 'text-emerald-900'}`}>
+                   {porcentajeDesempeño < 80 ? 'Evaluación Crítica' : 'Registro Exitoso'}
+                </h3>
+                <p className={`font-bold uppercase text-[10px] mt-2 tracking-widest ${porcentajeDesempeño < 80 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                   Firmado Digitalmente por {evaluatorName}
+                </p>
              </div>
              
              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -234,16 +241,16 @@ const EvaluationForm: React.FC<EvaluationFormProps> = ({ employee, evaluatorName
                    <div className="space-y-4">
                       <div className="flex justify-between items-center">
                          <span className="text-xs font-bold text-slate-700 uppercase">Puntaje Operativo</span>
-                         <span className="text-xl font-black text-[#003366]">{porcentajeDesempeño.toFixed(1)}%</span>
+                         <span className={`text-xl font-black ${porcentajeDesempeño < 80 ? 'text-rose-600' : 'text-[#003366]'}`}>{porcentajeDesempeño.toFixed(1)}%</span>
                       </div>
                       <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden">
-                         <div className="bg-[#003366] h-full" style={{ width: `${porcentajeDesempeño}%` }}></div>
+                         <div className={`h-full ${porcentajeDesempeño < 80 ? 'bg-rose-500' : 'bg-[#003366]'}`} style={{ width: `${porcentajeDesempeño}%` }}></div>
                       </div>
                    </div>
                 </div>
-                <div className="p-8 bg-[#003366] rounded-[32px] text-white">
-                   <p className="text-[10px] font-black opacity-40 uppercase tracking-widest mb-4">Ajuste Recomendado</p>
-                   <p className="text-2xl font-black text-[#FFCC00] uppercase">{increaseInfo.text}</p>
+                <div className={`p-8 rounded-[32px] text-white ${porcentajeDesempeño < 80 ? 'bg-rose-900' : 'bg-[#003366]'}`}>
+                   <p className="text-[10px] font-black opacity-40 uppercase tracking-widest mb-4">Estatus Final</p>
+                   <p className={`text-2xl font-black uppercase ${porcentajeDesempeño < 80 ? 'text-white' : 'text-[#FFCC00]'}`}>{increaseInfo.text}</p>
                    <p className="text-[9px] mt-2 opacity-60 uppercase font-bold">{increaseInfo.note}</p>
                 </div>
              </div>
