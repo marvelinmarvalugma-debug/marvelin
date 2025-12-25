@@ -141,9 +141,30 @@ const App: React.FC = () => {
         const batch = lines.map(l => {
           const p = l.split('\t');
           if (p.length < 2) return null;
-          return { id: Math.random().toString(36).substr(2, 9), idNumber: p[0], name: p[1], role: p[2] || 'TECNICO', department: Department.Operations, photo: `https://picsum.photos/seed/${p[0]}/200/200`, managerName: currentEvaluator, managerRole: 'Supervisor', lastEvaluation: 'Pendiente', summary: '', kpis: employees[0].kpis.map(k => ({...k, score: 0})), notifications: [] };
+          // Mantener los KPIs por defecto de la estructura original
+          const defaultKpis = [
+            { id: 'k1', name: 'Productividad', score: 0, weight: 40 },
+            { id: 'k2', name: 'Calidad Operativa', score: 0, weight: 30 },
+            { id: 'k3', name: 'Seguridad SIHOA', score: 0, weight: 30 }
+          ];
+          return { 
+            id: Math.random().toString(36).substr(2, 9), 
+            idNumber: p[0], 
+            name: p[1], 
+            role: p[2] || 'TECNICO', 
+            department: Department.Operations, 
+            photo: `https://picsum.photos/seed/${p[0]}/200/200`, 
+            managerName: currentEvaluator, 
+            managerRole: isJaquelin ? 'Director' : 'Supervisor', 
+            lastEvaluation: 'Pendiente', 
+            summary: '', 
+            kpis: defaultKpis, 
+            notifications: [] 
+          };
         }).filter(Boolean) as Employee[];
-        setEmployees(prev => [...batch, ...prev]);
+        
+        // REQUERIMIENTO: Limpiar data anterior al hacer carga masiva
+        setEmployees(batch);
       }} />;
       case 'evaluations':
         if (isJaquelin) {
