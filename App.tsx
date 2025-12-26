@@ -6,11 +6,11 @@ import EmployeeDetails from './components/EmployeeDetails';
 import EvaluationForm from './components/EvaluationForm';
 import AddEmployeeForm from './components/AddEmployeeForm';
 import MonthlyReportModal from './components/MonthlyReportModal';
-import LoginPage from './pages/LoginPage'; // Importar la nueva página de login
-import { SessionContextProvider, useSession } from './components/SessionContextProvider'; // Importar el contexto de sesión
+import LoginPage from './src/pages/LoginPage'; // Ruta corregida
+import { SessionContextProvider, useSession } from './src/components/SessionContextProvider'; // Ruta corregida
 import { VulcanDB } from './services/storageService';
 import { Employee, FullEvaluation, Department, AUTHORIZED_EVALUATORS, BONUS_APPROVER, BonusStatus, VulcanNotification, KPI } from './types';
-import { supabase } from './integrations/supabase/client'; // Importar el cliente de Supabase
+import { supabase } from './src/integrations/supabase/client'; // Ruta corregida
 
 const AppContent: React.FC = () => {
   const { session, user } = useSession(); // Usar el hook de sesión
