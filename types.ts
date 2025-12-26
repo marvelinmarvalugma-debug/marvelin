@@ -66,6 +66,7 @@ export interface FullEvaluation {
   criteria: TechnicalCriterion[];
   observaciones: string;
   condicionBono: BonusStatus;
+  recomendacionSalarial: string; // Nuevo campo para persistencia
   totalPuntos: number;
   promedioFinal: number;
   date: string;

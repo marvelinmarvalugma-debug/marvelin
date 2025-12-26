@@ -16,18 +16,21 @@ const MonthlyReportModal: React.FC<MonthlyReportModalProps> = ({ evaluations, em
   const [selectedYear, setSelectedYear] = useState<string>(currentYearStr);
 
   // Agrupar meses y años únicos presentes en el historial para los selectores
-  const availableYears = useMemo(() => {
-    const years = Array.from(new Set(evaluations.map(e => e.año)));
+  const availableYears = useMemo<string[]>(() => {
+    /**
+     * Fix for error on line 22: explicitly type map callback to avoid 'unknown' inference.
+     */
+    const years = Array.from(new Set(evaluations.map((e: FullEvaluation) => e.año)));
     if (!years.includes(currentYearStr)) years.push(currentYearStr);
-    return years.sort((a, b) => parseInt(b) - parseInt(a));
+    return years.sort((a: string, b: string) => parseInt(b) - parseInt(a));
   }, [evaluations, currentYearStr]);
 
-  const availableMonths = useMemo(() => {
+  const availableMonths = useMemo<string[]>(() => {
     // Filtrar meses que tienen evaluaciones en el año seleccionado
     const monthsInYear = Array.from(new Set(
       evaluations
-        .filter(e => e.año === selectedYear)
-        .map(e => e.mes.toLowerCase())
+        .filter((e: FullEvaluation) => e.año === selectedYear)
+        .map((e: FullEvaluation) => e.mes.toLowerCase())
     ));
     
     // Asegurar que al menos el mes actual esté si no hay datos
@@ -39,8 +42,8 @@ const MonthlyReportModal: React.FC<MonthlyReportModalProps> = ({ evaluations, em
   }, [evaluations, selectedYear, currentMonthName, currentYearStr]);
 
   // Filtrar evaluaciones por mes Y año seleccionados
-  const filteredEvals = useMemo(() => {
-    return evaluations.filter(e => 
+  const filteredEvals = useMemo<FullEvaluation[]>(() => {
+    return evaluations.filter((e: FullEvaluation) => 
       e.mes.toLowerCase() === selectedMonth && 
       e.año === selectedYear
     );
@@ -60,7 +63,7 @@ const MonthlyReportModal: React.FC<MonthlyReportModalProps> = ({ evaluations, em
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#001a33]/90 backdrop-blur-md p-0 lg:p-4 print:bg-white print:p-0 print:block">
-      <div className="bg-white lg:rounded-[40px] shadow-2xl max-w-6xl w-full h-full lg:h-auto lg:max-h-[90vh] flex flex-col overflow-hidden print:max-h-none print:shadow-none print:rounded-none">
+      <div className="bg-white lg:rounded-[40px] shadow-2xl max-w-7xl w-full h-full lg:h-auto lg:max-h-[95vh] flex flex-col overflow-hidden print:max-h-none print:shadow-none print:rounded-none">
         
         {/* Cabecera del Modal (No se imprime) */}
         <div className="p-5 lg:p-8 border-b flex justify-between items-center bg-white z-10 print:hidden">
@@ -75,35 +78,37 @@ const MonthlyReportModal: React.FC<MonthlyReportModalProps> = ({ evaluations, em
         <div className="flex-1 overflow-y-auto">
           {/* Selectores de Periodo (No se imprime) */}
           <div className="p-5 lg:p-8 bg-slate-50 border-b space-y-4 print:hidden">
-            <div className="flex flex-col space-y-3">
-              <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Selección de Ciclo Fiscal</span>
-              <div className="flex flex-wrap gap-2">
-                {availableYears.map(y => (
-                  <button
-                    key={y}
-                    onClick={() => setSelectedYear(y)}
-                    className={`px-5 py-2 rounded-xl text-[10px] font-black transition-all ${selectedYear === y ? 'bg-[#003366] text-white shadow-lg' : 'bg-white text-slate-400 border border-slate-200'}`}
-                  >
-                    {y}
-                  </button>
-                ))}
+            <div className="flex flex-col lg:flex-row lg:items-center gap-6">
+              <div className="flex flex-col space-y-3 shrink-0">
+                <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Ciclo Fiscal</span>
+                <div className="flex flex-wrap gap-2">
+                  {availableYears.map(y => (
+                    <button
+                      key={y}
+                      onClick={() => setSelectedYear(y)}
+                      className={`px-5 py-2 rounded-xl text-[10px] font-black transition-all ${selectedYear === y ? 'bg-[#003366] text-white shadow-lg' : 'bg-white text-slate-400 border border-slate-200'}`}
+                    >
+                      {y}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
 
-            <div className="flex flex-col space-y-3">
-              <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Meses con Actividad</span>
-              <div className="flex flex-wrap gap-2">
-                {availableMonths.length > 0 ? availableMonths.map(m => (
-                  <button
-                    key={m}
-                    onClick={() => setSelectedMonth(m)}
-                    className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${selectedMonth === m ? 'bg-[#FFCC00] text-[#003366] shadow-md' : 'bg-white text-slate-400 border border-slate-200'}`}
-                  >
-                    {m}
-                  </button>
-                )) : (
-                  <span className="text-[10px] text-slate-400 font-black uppercase">Sin registros en el año seleccionado</span>
-                )}
+              <div className="flex flex-col space-y-3 flex-1">
+                <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Meses con Actividad</span>
+                <div className="flex flex-wrap gap-2">
+                  {availableMonths.length > 0 ? availableMonths.map(m => (
+                    <button
+                      key={m}
+                      onClick={() => setSelectedMonth(m)}
+                      className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${selectedMonth === m ? 'bg-[#FFCC00] text-[#003366] shadow-md' : 'bg-white text-slate-400 border border-slate-200'}`}
+                    >
+                      {m}
+                    </button>
+                  )) : (
+                    <span className="text-[10px] text-slate-400 font-black uppercase">Sin registros en el año seleccionado</span>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -118,7 +123,7 @@ const MonthlyReportModal: React.FC<MonthlyReportModalProps> = ({ evaluations, em
                 <p className="text-[9px] lg:text-xs font-black text-slate-400 uppercase tracking-[0.3em] mt-1">Reporte Oficial de Eficiencia Operativa</p>
               </div>
               <div className="text-left sm:text-right w-full sm:w-auto p-4 bg-slate-50 lg:bg-transparent rounded-2xl">
-                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Periodo</p>
+                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Periodo Reportado</p>
                 <p className="text-lg lg:text-xl font-black text-[#003366] uppercase">{selectedMonth} {selectedYear}</p>
               </div>
             </div>
@@ -154,7 +159,7 @@ const MonthlyReportModal: React.FC<MonthlyReportModalProps> = ({ evaluations, em
                 <div className="space-y-4">
                   <h4 className="text-[10px] font-black text-slate-800 uppercase tracking-[0.2em] flex items-center gap-3">
                     <span className="w-1.5 h-6 bg-[#FFCC00] rounded-full"></span>
-                    Relación Detallada de Nómina
+                    Relación Detallada de Nómina y Resultados de Desempeño
                   </h4>
                   <div className="overflow-x-auto border-2 border-slate-50 rounded-3xl bg-white shadow-sm mt-4">
                     <table className="w-full text-left text-[10px] min-w-[700px]">
@@ -169,7 +174,8 @@ const MonthlyReportModal: React.FC<MonthlyReportModalProps> = ({ evaluations, em
                       <tbody className="divide-y divide-slate-50">
                         {filteredEvals.map((ev, idx) => {
                           const emp = employees.find(e => e.id === ev.employeeId);
-                          const isFailed = ev.promedioFinal * 20 < 80;
+                          const scoreNum = ev.promedioFinal * 20;
+                          const isFailed = scoreNum < 80;
                           return (
                             <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
                               <td className="px-6 py-4">
@@ -178,7 +184,7 @@ const MonthlyReportModal: React.FC<MonthlyReportModalProps> = ({ evaluations, em
                               </td>
                               <td className="px-6 py-4 text-center">
                                  <span className={`px-4 py-1.5 rounded-full font-black ${isFailed ? 'bg-rose-50 text-rose-500 border border-rose-100' : 'bg-emerald-50 text-emerald-600 border border-emerald-100'}`}>
-                                   {(ev.promedioFinal * 20).toFixed(1)}%
+                                   {scoreNum.toFixed(1)}%
                                  </span>
                               </td>
                               <td className="px-6 py-4">

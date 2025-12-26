@@ -30,9 +30,9 @@ const App: React.FC = () => {
   }, [employees, currentEvaluator, isJaquelin]);
 
   // Filtrar historial de evaluaciones para el reporte
-  const filteredEvaluationsForReport = useMemo(() => {
+  const filteredEvaluationsForReport = useMemo<FullEvaluation[]>(() => {
     if (isJaquelin) return evaluationsHistory;
-    return evaluationsHistory.filter(ev => ev.evaluador === currentEvaluator);
+    return evaluationsHistory.filter((ev: FullEvaluation) => ev.evaluador === currentEvaluator);
   }, [evaluationsHistory, currentEvaluator, isJaquelin]);
 
   const handleSaveEvaluation = (evaluation: FullEvaluation) => {
@@ -53,7 +53,6 @@ const App: React.FC = () => {
   const handleApproveBonus = (employeeId: string) => {
     const today = new Date().toLocaleDateString('es-ES');
     
-    // 1. Actualizar historial de evaluaciones
     setEvaluationsHistory(prev => prev.map(ev => {
       if (ev.employeeId === employeeId && ev.condicionBono === BonusStatus.PendingAuth) {
         return { ...ev, condicionBono: BonusStatus.Approved, authorizedBy: BONUS_APPROVER };
@@ -61,7 +60,6 @@ const App: React.FC = () => {
       return ev;
     }));
 
-    // 2. Generar notificación para el empleado
     setEmployees(prev => prev.map(emp => {
       if (emp.id === employeeId) {
         const newNotification: VulcanNotification = {
@@ -101,8 +99,8 @@ const App: React.FC = () => {
     );
   };
 
-  const getPendingApprovals = () => {
-    return evaluationsHistory.filter(ev => ev.condicionBono === BonusStatus.PendingAuth);
+  const getPendingApprovals = (): FullEvaluation[] => {
+    return evaluationsHistory.filter((ev: FullEvaluation) => ev.condicionBono === BonusStatus.PendingAuth);
   };
 
   if (!currentEvaluator) {
@@ -136,7 +134,7 @@ const App: React.FC = () => {
 
   const renderContent = () => {
     if (isAddingEmployee) return <div className="py-8"><AddEmployeeForm onAdd={(data) => {
-      const newEmp = { ...data, id: Math.random().toString(36).substr(2, 9), kpis: employees[0].kpis.map(k => ({...k, score: 0})), lastEvaluation: 'Pendiente', summary: '', notifications: [] };
+      const newEmp = { ...data, id: Math.random().toString(36).substr(2, 9), kpis: (employees[0]?.kpis || []).map(k => ({...k, score: 0})), lastEvaluation: 'Pendiente', summary: '', notifications: [] };
       setEmployees(prev => [newEmp, ...prev]);
       setIsAddingEmployee(false);
     }} onCancel={() => setIsAddingEmployee(false)} /></div>;
@@ -184,11 +182,11 @@ const App: React.FC = () => {
             <div className="space-y-10">
               <div className="bg-[#001a33] rounded-[40px] p-10 text-white shadow-2xl border-b-8 border-[#FFCC00]">
                  <h3 className="text-3xl font-black tracking-tight uppercase">Control de Bonos Especiales</h3>
-                 <p className="text-[#FFCC00] mt-2 text-sm font-bold leading-relaxed">Bienvenida Directora {BONUS_APPROVER}. Usted debe autorizar únicamente los bonos de alto desempeño (98%+).</p>
+                 <p className="text-[#FFCC00] mt-2 text-sm font-bold leading-relaxed">Bienvenida Directora {BONUS_APPROVER}. Usted debe autorizar únicamente los bonos de alto desempeño.</p>
               </div>
               
               <div className="bg-white rounded-[40px] p-10 border border-slate-100 shadow-sm">
-                <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-8">Solicitudes de Bono Pendientes ({pending.length})</h4>
+                <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-8">Solicitudes Pendientes ({pending.length})</h4>
                 {pending.length === 0 ? (
                   <div className="text-center py-10">
                     <p className="text-slate-300 font-bold uppercase text-xs"> No hay bonos pendientes de autorización técnica por ahora.</p>
@@ -198,7 +196,7 @@ const App: React.FC = () => {
                     {pending.map(ev => {
                       const emp = employees.find(e => e.id === ev.employeeId);
                       return (
-                        <div key={ev.employeeId} className="flex items-center justify-between p-6 bg-slate-50 rounded-3xl border border-slate-100 animate-in slide-in-from-left duration-300">
+                        <div key={ev.employeeId} className="flex items-center justify-between p-6 bg-slate-50 rounded-3xl border border-slate-100">
                           <div className="flex items-center space-x-4">
                              <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center font-black text-indigo-600">
                                {(ev.promedioFinal * 20).toFixed(0)}%
@@ -212,7 +210,7 @@ const App: React.FC = () => {
                             onClick={() => handleApproveBonus(ev.employeeId)}
                             className="bg-[#003366] text-white px-8 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-[#FFCC00] hover:text-[#003366] transition-all"
                           >
-                            Autorizar Bono 20%+
+                            Autorizar Bono
                           </button>
                         </div>
                       );
@@ -229,7 +227,7 @@ const App: React.FC = () => {
             <div className="bg-[#003366] rounded-[40px] p-10 text-white shadow-2xl relative overflow-hidden">
                <div className="relative z-10 max-w-lg">
                  <h3 className="text-3xl font-black tracking-tight uppercase">Matriz de Campo</h3>
-                 <p className="text-blue-200 mt-2 text-sm leading-relaxed">Bienvenido, <strong>{currentEvaluator}</strong>. Por favor, complete las evaluaciones mensuales por departamento.</p>
+                 <p className="text-blue-200 mt-2 text-sm leading-relaxed">Bienvenido, <strong>{currentEvaluator}</strong>. Complete las evaluaciones mensuales.</p>
                </div>
             </div>
 
@@ -238,7 +236,6 @@ const App: React.FC = () => {
                 <div className="flex items-center space-x-4 px-4">
                   <span className="w-2 h-8 bg-[#FFCC00] rounded-full"></span>
                   <h4 className="text-xl font-black text-slate-800 uppercase tracking-tighter">Departamento: {dept}</h4>
-                  <span className="text-[10px] font-black bg-slate-200 text-slate-500 px-3 py-1 rounded-full">{deptEmployees.length} EMPLEADOS</span>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -255,7 +252,6 @@ const App: React.FC = () => {
                           )}
                         </div>
                         <h5 className="font-bold text-slate-800 uppercase text-sm truncate">{emp.name}</h5>
-                        <p className="text-[10px] text-slate-400 font-bold uppercase">{emp.role}</p>
                         <button 
                           disabled={evaluated}
                           onClick={() => setEvaluatingEmployee(emp)}

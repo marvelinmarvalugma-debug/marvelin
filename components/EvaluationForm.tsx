@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
-import { Employee, FullEvaluation, BonusStatus, TechnicalCriterion, BONUS_APPROVER } from '../types';
+import { Employee, FullEvaluation, BonusStatus, TechnicalCriterion } from '../types';
 import { VULCAN_CRITERIA } from '../constants';
 import { analyzeFullEvaluation } from '../services/geminiService';
 
@@ -37,7 +37,6 @@ const EvaluationForm: React.FC<EvaluationFormProps> = ({ employee, evaluatorName
   const [observaciones, setObservaciones] = useState('');
   const [bono, setBono] = useState<BonusStatus>(BonusStatus.Approved);
   const [analyzing, setAnalyzing] = useState(false);
-  const [aiResult, setAiResult] = useState<AIResult | null>(null);
 
   const yearsOptions = useMemo(() => {
     return [currentYear - 1, currentYear, currentYear + 1].map(String);
@@ -49,15 +48,6 @@ const EvaluationForm: React.FC<EvaluationFormProps> = ({ employee, evaluatorName
   const promedioFinalStr = totalPuntos > 0 ? (totalPuntos / criteria.length).toFixed(2) : "0.00";
   const promedioFinalNum = parseFloat(promedioFinalStr);
   const porcentajeDesempeño = (promedioFinalNum / 5) * 100;
-
-  const getSalaryIncreaseRecommendation = (percentage: number) => {
-    if (percentage >= 98) return { text: "Incremento del 20% o más", note: "Sujeto a aprobación de Jefe", color: "text-indigo-600 bg-indigo-50 border-indigo-200", requiresAuth: true };
-    if (percentage >= 88) return { text: "Incremento del 15%", note: "Desempeño Sobresaliente", color: "text-emerald-600 bg-emerald-50 border-emerald-200", requiresAuth: false };
-    if (percentage >= 80) return { text: "Incremento del 10%", note: "Cumple Expectativas", color: "text-blue-600 bg-blue-50 border-blue-200", requiresAuth: false };
-    return { text: "No recibe beneficio", note: "Puntuación insuficiente (inferior al 80%)", color: "text-rose-600 bg-rose-50 border-rose-200", requiresAuth: false };
-  };
-
-  const increaseInfo = getSalaryIncreaseRecommendation(porcentajeDesempeño);
 
   const handleScoreChange = (id: string, score: number) => {
     setCriteria(prev => prev.map(c => c.id === id ? { ...c, score } : c));
@@ -77,17 +67,18 @@ const EvaluationForm: React.FC<EvaluationFormProps> = ({ employee, evaluatorName
         areaDesempeño: area,
         criteria,
         observaciones,
-        condicionBono: porcentajeDesempeño < 80 ? BonusStatus.NotApproved : (increaseInfo.requiresAuth ? BonusStatus.PendingAuth : bono),
+        condicionBono: porcentajeDesempeño < 80 ? BonusStatus.NotApproved : bono,
+        recomendacionSalarial: "N/A", // Campo mantenido por compatibilidad de tipo pero sin uso UI
         totalPuntos,
         promedioFinal: promedioFinalNum,
         date: new Date().toISOString().split('T')[0]
       };
       
+      // Análisis opcional por IA
       try {
-        const result = await analyzeFullEvaluation(employee, evaluationData);
-        if (result) setAiResult(result);
+        await analyzeFullEvaluation(employee, evaluationData);
       } catch (aiErr) {
-        console.warn("AI Analysis failed", aiErr);
+        console.warn("AI Analysis skipped or failed", aiErr);
       }
       
       onSave(evaluationData);
@@ -212,7 +203,7 @@ const EvaluationForm: React.FC<EvaluationFormProps> = ({ employee, evaluatorName
             </div>
             <div className="flex flex-col lg:flex-row justify-between items-center bg-[#001a33] p-6 lg:p-8 rounded-[32px] text-white gap-6">
                <div className="text-center lg:text-left">
-                  <p className="text-[9px] font-black opacity-40 uppercase tracking-widest">Puntaje Mensual</p>
+                  <p className="text-[9px] font-black opacity-40 uppercase tracking-widest">Rendimiento Técnico</p>
                   <p className={`text-4xl lg:text-5xl font-black ${porcentajeDesempeño < 80 ? 'text-rose-400' : 'text-[#FFCC00]'}`}>{porcentajeDesempeño.toFixed(1)}%</p>
                </div>
                <div className="flex w-full lg:w-auto gap-4">
@@ -232,19 +223,13 @@ const EvaluationForm: React.FC<EvaluationFormProps> = ({ employee, evaluatorName
         {step === 3 && (
           <div className="space-y-6 lg:space-y-10 animate-in fade-in duration-300">
              <div className="space-y-3">
-                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Bitácora de Observaciones</label>
+                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Observaciones Finales</label>
                 <textarea 
                   value={observaciones} 
                   onChange={e => setObservaciones(e.target.value)}
                   className="w-full h-32 p-6 border-2 border-slate-50 rounded-[32px] bg-slate-50 focus:border-[#003366] outline-none font-bold text-slate-700 text-sm placeholder:text-slate-200"
-                  placeholder="Escriba aquí incidentes o notas adicionales..."
+                  placeholder="Justifique el desempeño observado..."
                 ></textarea>
-             </div>
-
-             <div className={`p-6 lg:p-8 rounded-[32px] border-4 text-center ${increaseInfo.color}`}>
-                <p className="text-[9px] font-black uppercase tracking-widest opacity-60 mb-2">Dictamen de Nómina Sugerido</p>
-                <p className="text-xl lg:text-2xl font-black uppercase leading-tight">{increaseInfo.text}</p>
-                <p className="text-[9px] font-bold uppercase mt-2 opacity-80">{increaseInfo.note}</p>
              </div>
 
              <div className="flex flex-col-reverse lg:flex-row justify-between gap-4 pt-6 border-t">
@@ -254,49 +239,40 @@ const EvaluationForm: React.FC<EvaluationFormProps> = ({ employee, evaluatorName
                   disabled={analyzing}
                   className="w-full lg:w-auto bg-[#003366] text-white px-12 py-5 rounded-2xl font-black uppercase tracking-widest shadow-2xl hover:scale-[1.02] transition-all text-xs"
                 >
-                  {analyzing ? 'PROCESANDO FIRMA...' : 'AUTORIZAR Y FIRMAR'}
+                  {analyzing ? 'GENERANDO REPORTE...' : 'AUTORIZAR Y FINALIZAR'}
                 </button>
              </div>
           </div>
         )}
 
         {step === 4 && (
-          <div className="space-y-6 lg:space-y-8 animate-in zoom-in duration-500">
-             <div className={`p-8 lg:p-12 rounded-[40px] text-center border-2 ${porcentajeDesempeño < 80 ? 'bg-rose-50 border-rose-100' : 'bg-emerald-50 border-emerald-100'}`}>
+          <div className="space-y-6 lg:space-y-8 animate-in zoom-in duration-500 text-center">
+             <div className={`p-8 lg:p-12 rounded-[40px] border-2 max-w-2xl mx-auto w-full ${porcentajeDesempeño < 80 ? 'bg-rose-50 border-rose-100' : 'bg-emerald-50 border-emerald-100'}`}>
                 <div className={`w-20 h-20 lg:w-24 lg:h-24 rounded-3xl flex items-center justify-center text-white text-3xl lg:text-4xl mx-auto mb-6 shadow-xl border-4 border-white ${porcentajeDesempeño < 80 ? 'bg-rose-500' : 'bg-emerald-500'}`}>
                    {porcentajeDesempeño < 80 ? '!' : '✓'}
                 </div>
                 <h3 className={`text-2xl lg:text-4xl font-black tracking-tighter uppercase ${porcentajeDesempeño < 80 ? 'text-rose-900' : 'text-emerald-900'}`}>
-                   {porcentajeDesempeño < 80 ? 'Atención Requerida' : 'Reporte Consolidado'}
+                   Evaluación Concluida
                 </h3>
-                <p className={`font-black uppercase text-[9px] mt-2 tracking-[0.2em] ${porcentajeDesempeño < 80 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                <p className="font-black uppercase text-[9px] mt-2 tracking-[0.2em] text-slate-500">
                    Periodo: {mes.toUpperCase()} {anio}
                 </p>
-             </div>
-             
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
-                <div className="p-6 lg:p-8 bg-white border-2 rounded-[32px] border-slate-50">
-                   <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest mb-4">Eficiencia del Mes</p>
-                   <div className="space-y-4">
-                      <div className="flex justify-between items-center">
-                         <span className="text-[10px] font-black text-slate-700 uppercase">Resultado Técnico</span>
-                         <span className={`text-xl lg:text-2xl font-black ${porcentajeDesempeño < 80 ? 'text-rose-600' : 'text-[#003366]'}`}>{porcentajeDesempeño.toFixed(1)}%</span>
-                      </div>
-                      <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                         <div className={`h-full transition-all duration-1000 ${porcentajeDesempeño < 80 ? 'bg-rose-500' : 'bg-[#003366]'}`} style={{ width: `${porcentajeDesempeño}%` }}></div>
-                      </div>
+
+                <div className="mt-10 mb-6">
+                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Porcentaje de Desempeño Alcanzado</p>
+                   <div className={`text-6xl lg:text-8xl font-black ${porcentajeDesempeño < 80 ? 'text-rose-600' : 'text-[#003366]'}`}>
+                     {porcentajeDesempeño.toFixed(1)}%
                    </div>
                 </div>
-                <div className={`p-6 lg:p-8 rounded-[32px] text-white flex flex-col justify-center ${porcentajeDesempeño < 80 ? 'bg-rose-900' : 'bg-[#003366]'}`}>
-                   <p className="text-[9px] font-black opacity-30 uppercase tracking-widest mb-2">Estatus Sugerido</p>
-                   <p className={`text-xl lg:text-2xl font-black uppercase ${porcentajeDesempeño < 80 ? 'text-white' : 'text-[#FFCC00]'}`}>{increaseInfo.text}</p>
-                   <p className="text-[9px] mt-1 opacity-60 uppercase font-black">{increaseInfo.note}</p>
+
+                <div className="w-full bg-slate-200 h-3 rounded-full overflow-hidden max-w-sm mx-auto">
+                   <div className={`h-full transition-all duration-1000 ${porcentajeDesempeño < 80 ? 'bg-rose-500' : 'bg-[#003366]'}`} style={{ width: `${porcentajeDesempeño}%` }}></div>
                 </div>
              </div>
 
              <div className="flex flex-col sm:flex-row justify-center gap-3 lg:gap-6 pt-6 print:hidden">
                 <button onClick={onClose} className="w-full sm:w-auto px-8 py-4 font-black text-slate-400 uppercase text-[10px] tracking-widest hover:text-[#003366] transition-all">Siguiente Empleado</button>
-                <button onClick={() => window.print()} className="w-full sm:w-auto bg-[#003366] text-white px-10 py-4 lg:py-5 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-blue-900/20 text-xs">🖨 Imprimir Copia</button>
+                <button onClick={() => window.print()} className="w-full sm:w-auto bg-[#003366] text-white px-10 py-4 lg:py-5 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-blue-900/20 text-xs text-center">🖨 Imprimir Copia</button>
              </div>
           </div>
         )}

@@ -28,16 +28,6 @@ const EmployeeDetails: React.FC<EmployeeDetailsProps> = ({ employee, onBack }) =
 
   const overallScore = Math.round(employee.kpis.reduce((sum, kpi) => sum + kpi.score * (kpi.weight / 100), 0));
 
-  const getIncreaseRange = (score: number) => {
-    if (score >= 98) return { label: "Potencial: +20% (Aprob. Jefe)", color: "bg-indigo-500", text: "text-indigo-700" };
-    if (score >= 88) return { label: "Potencial: +15% Incremento", color: "bg-emerald-500", text: "text-emerald-700" };
-    if (score >= 80) return { label: "Potencial: +10% Incremento", color: "bg-blue-500", text: "text-blue-700" };
-    // Caso solicitado: Por debajo del 80%
-    return { label: "No recibe beneficio", color: "bg-rose-500", text: "text-rose-700" };
-  };
-
-  const range = getIncreaseRange(overallScore);
-
   // Verificar si tiene una notificación de bono aprobada por Jaquelin
   const bonusApprovedNotification = employee.notifications?.find(n => n.type === 'bonus');
 
@@ -87,11 +77,6 @@ const EmployeeDetails: React.FC<EmployeeDetailsProps> = ({ employee, onBack }) =
           <p className="text-slate-400 font-bold text-xs mt-2 tracking-widest">CÉDULA: V-{employee.idNumber}</p>
           
           <div className="mt-8 pt-8 border-t border-slate-50 space-y-4">
-            <div className={`p-4 rounded-2xl border flex flex-col items-center justify-center ${range.text} bg-opacity-10 bg-current`}>
-               <span className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1">Estatus Salarial</span>
-               <span className="font-black text-xs uppercase">{range.label}</span>
-            </div>
-            
             {bonusApprovedNotification && (
                <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100 flex flex-col items-center">
                   <span className="text-[10px] font-black uppercase text-emerald-600 tracking-widest opacity-60 mb-1">Autorización Dirección</span>
