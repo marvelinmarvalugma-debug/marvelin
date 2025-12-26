@@ -8,6 +8,7 @@ import EvaluationForm from './components/EvaluationForm';
 import AddEmployeeForm from './components/AddEmployeeForm';
 import MonthlyReportModal from './components/MonthlyReportModal';
 import Login from './pages/Login';
+import ApiKeyManagement from './pages/ApiKeyManagement'; // Import the new component
 import { SessionContextProvider, useSession } from './components/SessionContextProvider';
 import { INITIAL_EMPLOYEES } from './constants';
 import { Employee, FullEvaluation, Department, AUTHORIZED_EVALUATORS, BONUS_APPROVER, BonusStatus, VulcanNotification, KPI, TechnicalCriterion } from './types';
@@ -43,7 +44,10 @@ const AppContent: React.FC = () => {
           setCurrentEvaluatorName(emailName.toUpperCase());
           setIsBonusApprover(emailName.toUpperCase() === BONUS_APPROVER);
         }
-        navigate('/'); // Redirect to home if logged in
+        // Ensure we don't navigate away if already on a specific route like /api-keys
+        if (window.location.pathname === '/login') {
+          navigate('/');
+        }
       }
     }
   }, [session, loading, user, userProfile, navigate]);
@@ -377,6 +381,7 @@ const App: React.FC = () => {
     <SessionContextProvider>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/api-keys" element={<ApiKeyManagement />} /> {/* New route */}
         <Route path="/" element={<AppContent />} />
       </Routes>
     </SessionContextProvider>

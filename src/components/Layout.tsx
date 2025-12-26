@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom'; // Import Link
 import { BONUS_APPROVER } from '../types';
 
 interface LayoutProps {
@@ -25,14 +26,16 @@ const Layout: React.FC<LayoutProps> = ({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: '📊' },
-    { id: 'employees', label: 'Personal', icon: '👥' },
-    { id: 'evaluations', label: isBonusApprover ? 'Aprobación Bonos' : 'Matriz Desempeño', icon: isBonusApprover ? '✅' : '📝' },
+    { id: 'dashboard', label: 'Dashboard', icon: '📊', path: '/' },
+    { id: 'employees', label: 'Personal', icon: '👥', path: '/employees' }, // Path for employees
+    { id: 'evaluations', label: isBonusApprover ? 'Aprobación Bonos' : 'Matriz Desempeño', icon: isBonusApprover ? '✅' : '📝', path: '/evaluations' },
+    { id: 'api-keys', label: 'Claves API', icon: '🔑', path: '/api-keys' }, // New API Keys item
   ];
 
-  const handleTabChange = (id: string) => {
+  const handleTabChange = (id: string, path: string) => {
     setActiveTab(id);
     setIsSidebarOpen(false);
+    // No need to navigate here, Link component handles it
   };
 
   return (
@@ -61,9 +64,10 @@ const Layout: React.FC<LayoutProps> = ({
         
         <nav className="flex-1 mt-8">
           {navItems.map((item) => (
-            <button
+            <Link
               key={item.id}
-              onClick={() => handleTabChange(item.id)}
+              to={item.path}
+              onClick={() => handleTabChange(item.id, item.path)}
               className={`w-full flex items-center px-8 py-5 transition-all duration-300 ${
                 activeTab === item.id 
                   ? 'bg-[#003366] text-[#FFCC00] border-r-8 border-[#FFCC00] shadow-inner' 
@@ -72,7 +76,7 @@ const Layout: React.FC<LayoutProps> = ({
             >
               <span className="text-2xl mr-4">{item.icon}</span>
               <span className="font-black text-sm uppercase tracking-widest">{item.label}</span>
-            </button>
+            </Link>
           ))}
         </nav>
 
