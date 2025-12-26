@@ -14,6 +14,11 @@ import { Employee, FullEvaluation, Department, AUTHORIZED_EVALUATORS, BONUS_APPR
 const App: React.FC = () => {
   const [isInitialized, setIsInitialized] = useState(false);
   const [currentEvaluator, setCurrentEvaluator] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [isSettingPassword, setIsSettingPassword] = useState(false);
+  const [loginError, setLoginError] = useState(false);
+  
   const [activeTab, setActiveTab] = useState('dashboard');
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [evaluationsHistory, setEvaluationsHistory] = useState<FullEvaluation[]>([]);
@@ -23,15 +28,20 @@ const App: React.FC = () => {
   const [showReportsModal, setShowReportsModal] = useState(false);
   const [showSync, setShowSync] = useState(false);
 
-  // Carga inicial desde la Base de Datos Local
+  // Carga inicial
   useEffect(() => {
     VulcanDB.initialize();
     setEmployees(VulcanDB.getEmployees());
     setEvaluationsHistory(VulcanDB.getEvaluations());
     setIsInitialized(true);
+    
+    // Verificar si existe clave maestra
+    if (!VulcanDB.getMasterPassword()) {
+      setIsSettingPassword(true);
+    }
   }, []);
 
-  // Persistencia automática ante cualquier cambio
+  // Persistencia automática
   useEffect(() => {
     if (isInitialized) {
       VulcanDB.saveEmployees(employees);
@@ -43,6 +53,26 @@ const App: React.FC = () => {
       VulcanDB.saveEvaluations(evaluationsHistory);
     }
   }, [evaluationsHistory, isInitialized]);
+
+  const handleAuth = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isSettingPassword) {
+      if (passwordInput.length < 4) {
+        alert("La clave debe tener al menos 4 caracteres.");
+        return;
+      }
+      VulcanDB.setMasterPassword(passwordInput);
+      setIsSettingPassword(false);
+      setIsAuthenticated(true);
+    } else {
+      if (passwordInput === VulcanDB.getMasterPassword()) {
+        setIsAuthenticated(true);
+        setLoginError(false);
+      } else {
+        setLoginError(true);
+      }
+    }
+  };
 
   const isJaquelin = currentEvaluator === BONUS_APPROVER;
 
@@ -143,11 +173,7 @@ const App: React.FC = () => {
     );
   };
 
-  const getPendingApprovals = (): FullEvaluation[] => {
-    return evaluationsHistory.filter((ev: FullEvaluation) => ev.condicionBono === BonusStatus.PendingAuth);
-  };
-
-  if (!currentEvaluator) {
+  if (!currentEvaluator || !isAuthenticated) {
     return (
       <div className="min-h-screen bg-[#001a33] flex items-center justify-center p-6">
         <div className="bg-white rounded-[40px] shadow-2xl max-w-md w-full p-10 text-center animate-in zoom-in duration-500">
@@ -155,21 +181,64 @@ const App: React.FC = () => {
             <div className="w-16 h-1 bg-[#FFCC00] rounded-full"></div>
           </div>
           <h1 className="text-3xl font-black text-[#003366] tracking-tighter mb-2">VULCAN<span className="text-[#FFCC00]">HR</span></h1>
-          <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mb-8">Base de Datos de Desempeño</p>
-          <div className="space-y-3">
-            {AUTHORIZED_EVALUATORS.map(name => (
-              <button
-                key={name}
-                onClick={() => setCurrentEvaluator(name)}
-                className={`w-full p-4 border-2 rounded-2xl text-sm font-bold flex justify-between items-center group transition-all hover:scale-[1.02] active:scale-95 ${
-                  name === BONUS_APPROVER ? 'bg-[#003366] text-[#FFCC00] border-[#003366]' : 'bg-slate-50 border-slate-100 text-[#003366]'
-                }`}
-              >
-                {name}
-                <span className="text-[10px] opacity-60 font-black">{name === BONUS_APPROVER ? 'DIRECTOR' : 'SUPERVISOR'}</span>
-              </button>
-            ))}
-          </div>
+          
+          {!currentEvaluator ? (
+            <>
+              <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mb-8">Seleccione su Perfil de Acceso</p>
+              <div className="space-y-3">
+                {AUTHORIZED_EVALUATORS.map(name => (
+                  <button
+                    key={name}
+                    onClick={() => setCurrentEvaluator(name)}
+                    className={`w-full p-4 border-2 rounded-2xl text-sm font-bold flex justify-between items-center group transition-all hover:scale-[1.02] active:scale-95 ${
+                      name === BONUS_APPROVER ? 'bg-[#003366] text-[#FFCC00] border-[#003366]' : 'bg-slate-50 border-slate-100 text-[#003366]'
+                    }`}
+                  >
+                    {name}
+                    <span className="text-[10px] opacity-60 font-black">{name === BONUS_APPROVER ? 'DIRECTOR' : 'SUPERVISOR'}</span>
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : (
+            <form onSubmit={handleAuth} className="animate-in slide-in-from-bottom-4">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Acceso para: {currentEvaluator}</p>
+              <h2 className="text-xl font-black text-[#003366] mb-6 uppercase tracking-tight">
+                {isSettingPassword ? 'Crear Clave de Seguridad' : 'Ingrese su Clave'}
+              </h2>
+              {isSettingPassword && (
+                <p className="text-[10px] text-slate-400 mb-6 bg-amber-50 p-4 rounded-xl border border-amber-100 font-bold uppercase">
+                  ⚠️ Esta clave se le pedirá cada vez que ingrese. Guárdela bien.
+                </p>
+              )}
+              <input
+                autoFocus
+                type="password"
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.target.value)}
+                placeholder="••••••••"
+                className={`w-full p-4 bg-slate-50 border-2 rounded-2xl text-center text-lg font-black tracking-[0.5em] outline-none transition-all ${loginError ? 'border-rose-300 bg-rose-50' : 'focus:border-[#003366] border-slate-100'}`}
+              />
+              {loginError && <p className="text-[10px] text-rose-500 font-black uppercase mt-4 animate-bounce">Clave Incorrecta</p>}
+              
+              <div className="grid grid-cols-2 gap-4 mt-8">
+                <button 
+                  type="button"
+                  onClick={() => { setCurrentEvaluator(null); setPasswordInput(''); setLoginError(false); }}
+                  className="py-4 text-slate-400 font-black uppercase text-[10px] tracking-widest"
+                >
+                  Regresar
+                </button>
+                <button 
+                  type="submit"
+                  className="py-4 bg-[#003366] text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl shadow-blue-900/20"
+                >
+                  {isSettingPassword ? 'Establecer Clave' : 'Acceder'}
+                </button>
+              </div>
+            </form>
+          )}
+          
           <p className="mt-8 text-[9px] text-slate-300 font-bold uppercase tracking-widest">Almacenamiento Local Activado</p>
         </div>
       </div>
@@ -178,7 +247,6 @@ const App: React.FC = () => {
 
   const renderContent = () => {
     if (showSync) return <div className="py-8"><SyncPanel onComplete={() => setShowSync(false)} /></div>;
-
     if (isAddingEmployee) return <div className="py-8"><AddEmployeeForm onAdd={(data) => {
       const baseKpis: KPI[] = employees.length > 0 ? employees[0].kpis : [
         { id: 'k1', name: 'Productividad', score: 0, weight: 40 },
@@ -198,7 +266,6 @@ const App: React.FC = () => {
     }} onCancel={() => setIsAddingEmployee(false)} /></div>;
 
     if (evaluatingEmployee) return <div className="py-8"><EvaluationForm employee={evaluatingEmployee} evaluatorName={currentEvaluator} onClose={() => { setEvaluatingEmployee(null); setActiveTab('dashboard'); }} onSave={handleSaveEvaluation} /></div>;
-
     if (selectedEmployee) return <EmployeeDetails employee={selectedEmployee} evaluations={evaluationsHistory} onBack={() => setSelectedEmployee(null)} />;
 
     switch (activeTab) {
@@ -206,7 +273,7 @@ const App: React.FC = () => {
       case 'employees': return <EmployeeList employees={filteredEmployees} onSelect={setSelectedEmployee} onAddNew={() => setIsAddingEmployee(true)} onBulkAdd={handleBulkAdd} />;
       case 'evaluations':
         if (isJaquelin) {
-          const pending = getPendingApprovals();
+          const pending = evaluationsHistory.filter((ev: FullEvaluation) => ev.condicionBono === BonusStatus.PendingAuth);
           return (
             <div className="space-y-10">
               <div className="bg-[#001a33] rounded-[40px] p-10 text-white shadow-2xl border-b-8 border-[#FFCC00]">
@@ -274,7 +341,7 @@ const App: React.FC = () => {
       onDownloadReports={() => setShowReportsModal(true)} 
       onOpenSync={() => { setShowSync(true); setSelectedEmployee(null); setEvaluatingEmployee(null); setIsAddingEmployee(false); }}
       evaluatorName={currentEvaluator} 
-      onChangeEvaluator={() => setCurrentEvaluator(null)}
+      onChangeEvaluator={() => { setCurrentEvaluator(null); setIsAuthenticated(false); setPasswordInput(''); }}
     >
       {renderContent()}
       {showReportsModal && <MonthlyReportModal evaluations={filteredEvaluationsForReport} employees={filteredEmployees} onClose={() => setShowReportsModal(false)} />}

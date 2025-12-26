@@ -5,6 +5,7 @@ import { INITIAL_EMPLOYEES } from '../constants';
 const DB_KEYS = {
   EMPLOYEES: 'vulcan_db_employees_v1',
   EVALUATIONS: 'vulcan_db_evaluations_v1',
+  MASTER_PWD: 'vulcan_db_master_pwd_v1',
 };
 
 export const VulcanDB = {
@@ -14,6 +15,9 @@ export const VulcanDB = {
       localStorage.setItem(DB_KEYS.EMPLOYEES, JSON.stringify(INITIAL_EMPLOYEES));
     }
   },
+
+  getMasterPassword: () => localStorage.getItem(DB_KEYS.MASTER_PWD),
+  setMasterPassword: (pwd: string) => localStorage.setItem(DB_KEYS.MASTER_PWD, pwd),
 
   getEmployees: (): Employee[] => {
     const data = localStorage.getItem(DB_KEYS.EMPLOYEES);
