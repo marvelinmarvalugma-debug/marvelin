@@ -8,6 +8,7 @@ interface LayoutProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   onDownloadReports?: () => void;
+  onOpenSync?: () => void;
   evaluatorName?: string | null;
   onChangeEvaluator?: () => void;
 }
@@ -17,6 +18,7 @@ const Layout: React.FC<LayoutProps> = ({
   activeTab, 
   setActiveTab, 
   onDownloadReports,
+  onOpenSync,
   evaluatorName,
   onChangeEvaluator
 }) => {
@@ -79,9 +81,18 @@ const Layout: React.FC<LayoutProps> = ({
               <span className="font-black text-sm uppercase tracking-widest">{item.label}</span>
             </button>
           ))}
+          
+          {/* Botón de Sincronización */}
+          <button
+            onClick={onOpenSync}
+            className={`w-full flex items-center px-8 py-5 text-slate-400 hover:bg-white/5 hover:text-white transition-all`}
+          >
+            <span className="text-2xl mr-4">☁️</span>
+            <span className="font-black text-sm uppercase tracking-widest">Sincronizar</span>
+          </button>
         </nav>
 
-        <div className="p-6">
+        <div className="p-6 space-y-3">
            <button 
              onClick={handleResetDB}
              className="w-full py-3 border border-white/10 rounded-xl text-[8px] font-black uppercase text-slate-500 hover:text-rose-400 hover:border-rose-400/30 transition-all tracking-[0.2em]"

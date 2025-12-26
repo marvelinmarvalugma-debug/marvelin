@@ -7,6 +7,7 @@ import EmployeeDetails from './components/EmployeeDetails';
 import EvaluationForm from './components/EvaluationForm';
 import AddEmployeeForm from './components/AddEmployeeForm';
 import MonthlyReportModal from './components/MonthlyReportModal';
+import SyncPanel from './components/SyncPanel';
 import { VulcanDB } from './services/storageService';
 import { Employee, FullEvaluation, Department, AUTHORIZED_EVALUATORS, BONUS_APPROVER, BonusStatus, VulcanNotification, KPI } from './types';
 
@@ -20,14 +21,19 @@ const App: React.FC = () => {
   const [evaluatingEmployee, setEvaluatingEmployee] = useState<Employee | null>(null);
   const [isAddingEmployee, setIsAddingEmployee] = useState(false);
   const [showReportsModal, setShowReportsModal] = useState(false);
+  const [showSyncPanel, setShowSyncPanel] = useState(false);
 
   // Inicializar base de datos al cargar
   useEffect(() => {
     VulcanDB.initialize();
-    setEmployees(VulcanDB.getEmployees());
-    setEvaluationsHistory(VulcanDB.getEvaluations());
+    loadLocalData();
     setIsInitialized(true);
   }, []);
+
+  const loadLocalData = () => {
+    setEmployees(VulcanDB.getEmployees());
+    setEvaluationsHistory(VulcanDB.getEvaluations());
+  };
 
   // Persistir cambios automáticamente cuando cambien los empleados o evaluaciones
   useEffect(() => {
@@ -151,6 +157,8 @@ const App: React.FC = () => {
   }
 
   const renderContent = () => {
+    if (showSyncPanel) return <div className="py-8"><SyncPanel onSyncComplete={() => { loadLocalData(); setShowSyncPanel(false); }} /></div>;
+    
     if (isAddingEmployee) return <div className="py-8"><AddEmployeeForm onAdd={(data) => {
       const baseKpis: KPI[] = employees.length > 0 ? employees[0].kpis : [
         { id: 'k1', name: 'Productividad', score: 0, weight: 40 },
@@ -267,7 +275,14 @@ const App: React.FC = () => {
   };
 
   return (
-    <Layout activeTab={evaluatingEmployee || isAddingEmployee ? 'evaluations' : activeTab} setActiveTab={setActiveTab} onDownloadReports={() => setShowReportsModal(true)} evaluatorName={currentEvaluator} onChangeEvaluator={() => setCurrentEvaluator(null)}>
+    <Layout 
+      activeTab={showSyncPanel ? 'Sincronización' : activeTab} 
+      setActiveTab={(tab) => { setActiveTab(tab); setShowSyncPanel(false); }} 
+      onDownloadReports={() => setShowReportsModal(true)} 
+      onOpenSync={() => { setShowSyncPanel(true); setSelectedEmployee(null); setEvaluatingEmployee(null); setIsAddingEmployee(false); }}
+      evaluatorName={currentEvaluator} 
+      onChangeEvaluator={() => setCurrentEvaluator(null)}
+    >
       {renderContent()}
       {showReportsModal && <MonthlyReportModal evaluations={filteredEvaluationsForReport} employees={filteredEmployees} onClose={() => setShowReportsModal(false)} />}
     </Layout>
