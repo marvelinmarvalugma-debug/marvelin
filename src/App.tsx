@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast'; // Import Toaster
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
 import EmployeeList from './components/EmployeeList';
@@ -8,7 +9,7 @@ import EvaluationForm from './components/EvaluationForm';
 import AddEmployeeForm from './components/AddEmployeeForm';
 import MonthlyReportModal from './components/MonthlyReportModal';
 import Login from './pages/Login';
-import ApiKeyManagement from './pages/ApiKeyManagement'; // Import the new component
+import ApiKeyManagement from './pages/ApiKeyManagement';
 import { SessionContextProvider, useSession } from './components/SessionContextProvider';
 import { INITIAL_EMPLOYEES } from './constants';
 import { Employee, FullEvaluation, Department, AUTHORIZED_EVALUATORS, BONUS_APPROVER, BonusStatus, VulcanNotification, KPI, TechnicalCriterion } from './types';
@@ -30,24 +31,30 @@ const AppContent: React.FC = () => {
 
   // Effect to handle authentication and set evaluator details
   useEffect(() => {
-    if (!loading) {
-      if (!session) {
+    if (loading) return; // Wait until session loading is complete
+
+    if (!session) {
+      // If not authenticated, redirect to login, unless already there
+      if (window.location.pathname !== '/login') {
         navigate('/login');
+      }
+    } else {
+      // If authenticated
+      if (userProfile) {
+        const fullName = `${userProfile.first_name || ''} ${userProfile.last_name || ''}`.trim();
+        setCurrentEvaluatorName(fullName.toUpperCase());
+        setIsBonusApprover(userProfile.is_bonus_approver);
       } else {
-        if (userProfile) {
-          const fullName = `${userProfile.first_name || ''} ${userProfile.last_name || ''}`.trim();
-          setCurrentEvaluatorName(fullName.toUpperCase());
-          setIsBonusApprover(userProfile.is_bonus_approver);
-        } else {
-          // Fallback if profile not found
-          const emailName = user?.email?.split('@')[0] || 'Usuario';
-          setCurrentEvaluatorName(emailName.toUpperCase());
-          setIsBonusApprover(emailName.toUpperCase() === BONUS_APPROVER);
-        }
-        // Ensure we don't navigate away if already on a specific route like /api-keys
-        if (window.location.pathname === '/login') {
-          navigate('/');
-        }
+        // Fallback if profile not found, use email part
+        const emailName = user?.email?.split('@')[0] || 'Usuario';
+        setCurrentEvaluatorName(emailName.toUpperCase());
+        // Determine if fallback user is the bonus approver
+        setIsBonusApprover(emailName.toUpperCase() === BONUS_APPROVER);
+      }
+
+      // If authenticated and currently on the login page, redirect to home
+      if (window.location.pathname === '/login') {
+        navigate('/');
       }
     }
   }, [session, loading, user, userProfile, navigate]);
@@ -379,9 +386,10 @@ const AppContent: React.FC = () => {
 const App: React.FC = () => {
   return (
     <SessionContextProvider>
+      <Toaster /> {/* Global Toaster for notifications */}
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route path="/api-keys" element={<ApiKeyManagement />} /> {/* New route */}
+        <Route path="/api-keys" element={<ApiKeyManagement />} />
         <Route path="/" element={<AppContent />} />
       </Routes>
     </SessionContextProvider>
