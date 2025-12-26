@@ -88,7 +88,16 @@ const App: React.FC = () => {
   }, [evaluationsHistory, currentEvaluator, isJaquelin]);
 
   const handleSaveEvaluation = (evaluation: FullEvaluation) => {
-    setEvaluationsHistory(prev => [...prev, evaluation]);
+    // Lógica para ALMACENAR ÚNICAMENTE por trabajador, mes y año
+    setEvaluationsHistory(prev => {
+      const filtered = prev.filter(ev => 
+        !(ev.employeeId === evaluation.employeeId && 
+          ev.mes.toLowerCase() === evaluation.mes.toLowerCase() && 
+          ev.año === evaluation.año)
+      );
+      return [...filtered, evaluation];
+    });
+
     setEmployees(prev => prev.map(emp => 
       emp.id === evaluation.employeeId 
         ? { 
@@ -101,16 +110,22 @@ const App: React.FC = () => {
   };
 
   const handleBulkAdd = (data: string) => {
-    const lines = data.split('\n');
+    // Procesador flexible para Carga Masiva (detecta tabs, comas o punto y coma)
+    const lines = data.split(/\r?\n/).filter(line => line.trim() !== '');
     const newEmps: Employee[] = [];
+    
     lines.forEach(line => {
-      const parts = line.split('\t');
-      if (parts.length >= 3) {
+      // Intenta separar por tabulador, si no, por punto y coma, si no, por coma
+      let parts = line.split('\t');
+      if (parts.length < 2) parts = line.split(';');
+      if (parts.length < 2) parts = line.split(',');
+
+      if (parts.length >= 2) {
         newEmps.push({
           id: Math.random().toString(36).substr(2, 9),
           idNumber: parts[0].trim(),
           name: parts[1].trim(),
-          role: parts[2].trim(),
+          role: parts[2] ? parts[2].trim() : 'OPERARIO',
           department: Department.Operations,
           photo: `https://picsum.photos/seed/${Math.random()}/200/200`,
           managerName: currentEvaluator || AUTHORIZED_EVALUATORS[0],
@@ -126,7 +141,13 @@ const App: React.FC = () => {
         });
       }
     });
-    setEmployees(prev => [...newEmps, ...prev]);
+
+    if (newEmps.length > 0) {
+      setEmployees(prev => [...newEmps, ...prev]);
+      alert(`¡Éxito! Se procesaron ${newEmps.length} trabajadores.`);
+    } else {
+      alert("No se detectaron datos válidos. Asegúrese de copiar columnas de Cédula y Nombre.");
+    }
   };
 
   const handleApproveBonus = (employeeId: string) => {
@@ -153,15 +174,6 @@ const App: React.FC = () => {
       return emp;
     }));
   };
-
-  const employeesByDept = useMemo(() => {
-    const groups: Record<string, Employee[]> = {};
-    filteredEmployees.forEach(emp => {
-      if (!groups[emp.department]) groups[emp.department] = [];
-      groups[emp.department].push(emp);
-    });
-    return groups;
-  }, [filteredEmployees]);
 
   const hasBeenEvaluatedThisMonth = (employeeId: string) => {
     const currentMonth = new Date().toLocaleString('es-ES', { month: 'long' }).toLowerCase();
@@ -302,9 +314,17 @@ const App: React.FC = () => {
             </div>
           );
         }
+        
+        // Vista para evaluadores regulares
+        const groups: Record<string, Employee[]> = {};
+        filteredEmployees.forEach(emp => {
+          if (!groups[emp.department]) groups[emp.department] = [];
+          groups[emp.department].push(emp);
+        });
+
         return (
           <div className="space-y-10">
-            {(Object.entries(employeesByDept) as [string, Employee[]][]).map(([dept, deptEmployees]) => (
+            {Object.entries(groups).map(([dept, deptEmployees]) => (
               <div key={dept} className="space-y-4">
                 <h4 className="text-xl font-black text-slate-800 uppercase px-4">Departamento: {dept}</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
