@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
-import { Toaster } from 'react-hot-toast'; // Import Toaster
+import { Toaster } from 'react-hot-toast';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
 import EmployeeList from './components/EmployeeList';
@@ -282,6 +282,12 @@ const AppContent: React.FC = () => {
     );
   }
 
+  // If not authenticated, the useEffect will redirect to /login.
+  // If authenticated, we render the main app content.
+  if (!session) {
+    return null; // Render nothing here, let the router handle the /login route
+  }
+
   const renderContent = () => {
     if (isAddingEmployee) return <div className="py-8"><AddEmployeeForm onAdd={(data) => {
       const baseKpis: KPI[] = employees.length > 0 ? employees[0].kpis : [];
@@ -375,7 +381,7 @@ const AppContent: React.FC = () => {
       evaluatorName={currentEvaluatorName} 
       onChangeEvaluator={handleLogout}
       isBonusApprover={isBonusApprover}
-      userRole={userProfile?.role || 'evaluator'} // Pass userRole
+      userRole={userProfile?.role || 'evaluator'}
     >
       {renderContent()}
       {showReportsModal && <MonthlyReportModal evaluations={filteredEvaluationsForReport} employees={filteredEmployees} onClose={() => setShowReportsModal(false)} />}
@@ -386,7 +392,7 @@ const AppContent: React.FC = () => {
 const App: React.FC = () => {
   return (
     <SessionContextProvider>
-      <Toaster /> {/* Global Toaster for notifications */}
+      <Toaster />
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/api-keys" element={<ApiKeyManagement />} />
