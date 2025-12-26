@@ -7,7 +7,6 @@ import EmployeeDetails from './components/EmployeeDetails';
 import EvaluationForm from './components/EvaluationForm';
 import AddEmployeeForm from './components/AddEmployeeForm';
 import MonthlyReportModal from './components/MonthlyReportModal';
-import SyncPanel from './components/SyncPanel';
 import { VulcanDB } from './services/storageService';
 import { Employee, FullEvaluation, Department, AUTHORIZED_EVALUATORS, BONUS_APPROVER, BonusStatus, VulcanNotification, KPI } from './types';
 
@@ -26,7 +25,6 @@ const App: React.FC = () => {
   const [evaluatingEmployee, setEvaluatingEmployee] = useState<Employee | null>(null);
   const [isAddingEmployee, setIsAddingEmployee] = useState(false);
   const [showReportsModal, setShowReportsModal] = useState(false);
-  const [showSync, setShowSync] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
 
   // Inicialización y Sincronización Automática
@@ -175,7 +173,7 @@ const App: React.FC = () => {
           id: Math.random().toString(36).substr(2, 9),
           employeeId: emp.id,
           title: "¡BONO AUTORIZADO!",
-          message: `La Dirección General (${BONUS_APPROVER}) ha autorizado su bono correspondiente.`,
+          message: `La Dirección General (${BONUS_APPROVER}) ha autorizada su bono correspondiente.`,
           date: today,
           type: 'bonus',
           read: false
@@ -269,7 +267,6 @@ const App: React.FC = () => {
   }
 
   const renderContent = () => {
-    if (showSync) return <div className="py-8"><SyncPanel onComplete={() => setShowSync(false)} /></div>;
     if (isAddingEmployee) return <div className="py-8"><AddEmployeeForm onAdd={(data) => {
       const baseKpis: KPI[] = employees.length > 0 ? employees[0].kpis : [
         { id: 'k1', name: 'Productividad', score: 0, weight: 40 },
@@ -366,10 +363,9 @@ const App: React.FC = () => {
 
   return (
     <Layout 
-      activeTab={showSync ? 'Sincronización' : activeTab} 
-      setActiveTab={(tab) => { setActiveTab(tab); setShowSync(false); }} 
+      activeTab={activeTab} 
+      setActiveTab={(tab) => { setActiveTab(tab); }} 
       onDownloadReports={() => setShowReportsModal(true)} 
-      onOpenSync={() => { setShowSync(true); setSelectedEmployee(null); setEvaluatingEmployee(null); setIsAddingEmployee(false); }}
       evaluatorName={currentEvaluator} 
       onChangeEvaluator={() => { setCurrentEvaluator(null); setIsAuthenticated(false); setPasswordInput(''); }}
       isSyncing={isSyncing}
