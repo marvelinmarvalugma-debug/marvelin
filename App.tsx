@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
@@ -7,16 +6,21 @@ import EmployeeDetails from './components/EmployeeDetails';
 import EvaluationForm from './components/EvaluationForm';
 import AddEmployeeForm from './components/AddEmployeeForm';
 import MonthlyReportModal from './components/MonthlyReportModal';
+import LoginPage from './pages/LoginPage'; // Importar la nueva página de login
+import { SessionContextProvider, useSession } from './components/SessionContextProvider'; // Importar el contexto de sesión
 import { VulcanDB } from './services/storageService';
 import { Employee, FullEvaluation, Department, AUTHORIZED_EVALUATORS, BONUS_APPROVER, BonusStatus, VulcanNotification, KPI } from './types';
+import { supabase } from './integrations/supabase/client'; // Importar el cliente de Supabase
 
-const App: React.FC = () => {
+const AppContent: React.FC = () => {
+  const { session, user } = useSession(); // Usar el hook de sesión
+  
   const [isInitialized, setIsInitialized] = useState(false);
   const [currentEvaluator, setCurrentEvaluator] = useState<string | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [passwordInput, setPasswordInput] = useState('');
-  const [isSettingPassword, setIsSettingPassword] = useState(false);
-  const [loginError, setLoginError] = useState(false);
+  // const [isAuthenticated, setIsAuthenticated] = useState(false); // Ya no es necesario con Supabase
+  // const [passwordInput, setPasswordInput] = useState(''); // Ya no es necesario con Supabase
+  // const [isSettingPassword, setIsSettingPassword] = useState(false); // Ya no es necesario con Supabase
+  // const [loginError, setLoginError] = useState(false); // Ya no es necesario con Supabase
   
   const [activeTab, setActiveTab] = useState('dashboard');
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -45,9 +49,10 @@ const App: React.FC = () => {
       setTimeout(() => setIsSyncing(false), 800);
     });
 
-    if (!VulcanDB.getMasterPassword()) {
-      setIsSettingPassword(true);
-    }
+    // La lógica de passwordInput y isSettingPassword se reemplaza por Supabase Auth
+    // if (!VulcanDB.getMasterPassword()) {
+    //   setIsSettingPassword(true);
+    // }
   }, []);
 
   // Persistencia automática con trigger de sincronización
@@ -69,25 +74,50 @@ const App: React.FC = () => {
     }
   }, [evaluationsHistory, isInitialized]);
 
-  const handleAuth = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (isSettingPassword) {
-      if (passwordInput.length < 4) {
-        alert("La clave debe tener al menos 4 caracteres.");
-        return;
-      }
-      VulcanDB.setMasterPassword(passwordInput);
-      setIsSettingPassword(false);
-      setIsAuthenticated(true);
-    } else {
-      if (passwordInput === VulcanDB.getMasterPassword()) {
-        setIsAuthenticated(true);
-        setLoginError(false);
+  // Lógica para obtener el perfil del usuario de Supabase
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (user) {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('first_name, last_name, role')
+          .eq('id', user.id)
+          .single();
+
+        if (error) {
+          console.error('Error fetching profile:', error);
+          // Fallback si no se encuentra el perfil, usar el email o un nombre genérico
+          setCurrentEvaluator(user.email || 'Usuario Desconocido');
+        } else if (data) {
+          setCurrentEvaluator(`${data.first_name} ${data.last_name}`);
+        }
       } else {
-        setLoginError(true);
+        setCurrentEvaluator(null);
       }
-    }
-  };
+    };
+
+    fetchUserProfile();
+  }, [user]);
+
+  // const handleAuth = (e: React.FormEvent) => { // Ya no es necesario con Supabase
+  //   e.preventDefault();
+  //   if (isSettingPassword) {
+  //     if (passwordInput.length < 4) {
+  //       alert("La clave debe tener al menos 4 caracteres.");
+  //       return;
+  //     }
+  //     VulcanDB.setMasterPassword(passwordInput);
+  //     setIsSettingPassword(false);
+  //     setIsAuthenticated(true);
+  //   } else {
+  //     if (passwordInput === VulcanDB.getMasterPassword()) {
+  //       setIsAuthenticated(true);
+  //       setLoginError(false);
+  //     } else {
+  //       setLoginError(true);
+  //     }
+  //   }
+  // };
 
   const isJaquelin = currentEvaluator === BONUS_APPROVER;
 
@@ -140,7 +170,7 @@ const App: React.FC = () => {
           role: parts[2] ? parts[2].trim() : 'OPERARIO',
           department: Department.Operations,
           photo: `https://picsum.photos/seed/${Math.random()}/200/200`,
-          managerName: currentEvaluator || AUTHORIZED_EVALUATORS[0],
+          managerName: currentEvaluator || AUTHORIZED_EVALUATORS[0], // Usar currentEvaluator de Supabase
           managerRole: 'Supervisor de Área',
           lastEvaluation: 'Pendiente',
           summary: '',
@@ -194,76 +224,8 @@ const App: React.FC = () => {
     );
   };
 
-  if (!currentEvaluator || !isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-[#001a33] flex items-center justify-center p-6">
-        <div className="bg-white rounded-[40px] shadow-2xl max-w-md w-full p-10 text-center animate-in zoom-in duration-500">
-          <div className="mb-6 flex justify-center">
-            <div className="w-16 h-1 bg-[#FFCC00] rounded-full"></div>
-          </div>
-          <h1 className="text-3xl font-black text-[#003366] tracking-tighter mb-2">VULCAN<span className="text-[#FFCC00]">HR</span></h1>
-          
-          {!currentEvaluator ? (
-            <>
-              <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mb-8">Seleccione su Perfil de Acceso</p>
-              <div className="space-y-3">
-                {AUTHORIZED_EVALUATORS.map(name => (
-                  <button
-                    key={name}
-                    onClick={() => setCurrentEvaluator(name)}
-                    className={`w-full p-4 border-2 rounded-2xl text-sm font-bold flex justify-between items-center group transition-all hover:scale-[1.02] active:scale-95 ${
-                      name === BONUS_APPROVER ? 'bg-[#003366] text-[#FFCC00] border-[#003366]' : 'bg-slate-50 border-slate-100 text-[#003366]'
-                    }`}
-                  >
-                    {name}
-                    <span className="text-[10px] opacity-60 font-black">{name === BONUS_APPROVER ? 'DIRECTOR' : 'SUPERVISOR'}</span>
-                  </button>
-                ))}
-              </div>
-            </>
-          ) : (
-            <form onSubmit={handleAuth} className="animate-in slide-in-from-bottom-4">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Acceso para: {currentEvaluator}</p>
-              <h2 className="text-xl font-black text-[#003366] mb-6 uppercase tracking-tight">
-                {isSettingPassword ? 'Crear Clave de Seguridad' : 'Ingrese su Clave'}
-              </h2>
-              {isSettingPassword && (
-                <p className="text-[10px] text-slate-400 mb-6 bg-amber-50 p-4 rounded-xl border border-amber-100 font-bold uppercase">
-                  ⚠️ Esta clave se le pedirá cada vez que ingrese. Guárdela bien.
-                </p>
-              )}
-              <input
-                autoFocus
-                type="password"
-                value={passwordInput}
-                onChange={(e) => setPasswordInput(e.target.value)}
-                placeholder="••••••••"
-                className={`w-full p-4 bg-slate-50 border-2 rounded-2xl text-center text-lg font-black tracking-[0.5em] outline-none transition-all ${loginError ? 'border-rose-300 bg-rose-50' : 'focus:border-[#003366] border-slate-100'}`}
-              />
-              {loginError && <p className="text-[10px] text-rose-500 font-black uppercase mt-4 animate-bounce">Clave Incorrecta</p>}
-              
-              <div className="grid grid-cols-2 gap-4 mt-8">
-                <button 
-                  type="button"
-                  onClick={() => { setCurrentEvaluator(null); setPasswordInput(''); setLoginError(false); }}
-                  className="py-4 text-slate-400 font-black uppercase text-[10px] tracking-widest"
-                >
-                  Regresar
-                </button>
-                <button 
-                  type="submit"
-                  className="py-4 bg-[#003366] text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl shadow-blue-900/20"
-                >
-                  {isSettingPassword ? 'Establecer Clave' : 'Acceder'}
-                </button>
-              </div>
-            </form>
-          )}
-          
-          <p className="mt-8 text-[9px] text-slate-300 font-bold uppercase tracking-widest">Almacenamiento Local Activado</p>
-        </div>
-      </div>
-    );
+  if (!session) { // Si no hay sesión, mostrar la página de login
+    return <LoginPage />;
   }
 
   const renderContent = () => {
@@ -285,7 +247,7 @@ const App: React.FC = () => {
       setIsAddingEmployee(false);
     }} onCancel={() => setIsAddingEmployee(false)} /></div>;
 
-    if (evaluatingEmployee) return <div className="py-8"><EvaluationForm employee={evaluatingEmployee} evaluatorName={currentEvaluator} onClose={() => { setEvaluatingEmployee(null); setActiveTab('dashboard'); }} onSave={handleSaveEvaluation} /></div>;
+    if (evaluatingEmployee) return <div className="py-8"><EvaluationForm employee={evaluatingEmployee} evaluatorName={currentEvaluator || 'Desconocido'} onClose={() => { setEvaluatingEmployee(null); setActiveTab('dashboard'); }} onSave={handleSaveEvaluation} /></div>;
     if (selectedEmployee) return <EmployeeDetails employee={selectedEmployee} evaluations={evaluationsHistory} onBack={() => setSelectedEmployee(null)} />;
 
     switch (activeTab) {
@@ -361,13 +323,18 @@ const App: React.FC = () => {
     }
   };
 
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    // No need to reload, onAuthStateChange will handle state update
+  };
+
   return (
     <Layout 
       activeTab={activeTab} 
       setActiveTab={(tab) => { setActiveTab(tab); }} 
       onDownloadReports={() => setShowReportsModal(true)} 
       evaluatorName={currentEvaluator} 
-      onChangeEvaluator={() => { setCurrentEvaluator(null); setIsAuthenticated(false); setPasswordInput(''); }}
+      onChangeEvaluator={handleSignOut} // Usar la función de logout de Supabase
       isSyncing={isSyncing}
     >
       {renderContent()}
@@ -375,5 +342,11 @@ const App: React.FC = () => {
     </Layout>
   );
 };
+
+const App: React.FC = () => (
+  <SessionContextProvider>
+    <AppContent />
+  </SessionContextProvider>
+);
 
 export default App;
