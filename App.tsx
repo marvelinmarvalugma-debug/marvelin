@@ -44,8 +44,8 @@ const App: React.FC = () => {
           } 
         : emp
     ));
-    setEvaluatingEmployee(null);
-    setActiveTab('dashboard');
+    // No cerramos el formulario inmediatamente si queremos que el usuario descargue el PDF
+    // La navegación la controlará el botón "Regresar" del propio EvaluationForm
   };
 
   const handleApproveBonus = (employeeId: string) => {
@@ -122,7 +122,6 @@ const App: React.FC = () => {
   }
 
   const renderContent = () => {
-    // Fixed: Properly typed baseKpis and newEmp to avoid 'unknown' issues in map
     if (isAddingEmployee) return <div className="py-8"><AddEmployeeForm onAdd={(data) => {
       const baseKpis: KPI[] = employees.length > 0 ? employees[0].kpis : [];
       const newEmp: Employee = { 
@@ -137,9 +136,9 @@ const App: React.FC = () => {
       setIsAddingEmployee(false);
     }} onCancel={() => setIsAddingEmployee(false)} /></div>;
 
-    if (evaluatingEmployee) return <div className="py-8"><EvaluationForm employee={evaluatingEmployee} evaluatorName={currentEvaluator} onClose={() => setEvaluatingEmployee(null)} onSave={handleSaveEvaluation} /></div>;
+    if (evaluatingEmployee) return <div className="py-8"><EvaluationForm employee={evaluatingEmployee} evaluatorName={currentEvaluator} onClose={() => { setEvaluatingEmployee(null); setActiveTab('dashboard'); }} onSave={handleSaveEvaluation} /></div>;
 
-    if (selectedEmployee) return <EmployeeDetails employee={selectedEmployee} onBack={() => setSelectedEmployee(null)} />;
+    if (selectedEmployee) return <EmployeeDetails employee={selectedEmployee} evaluations={evaluationsHistory} onBack={() => setSelectedEmployee(null)} />;
 
     switch (activeTab) {
       case 'dashboard': return <Dashboard employees={filteredEmployees} />;
@@ -177,7 +176,6 @@ const App: React.FC = () => {
         }
         return (
           <div className="space-y-10">
-            {/* Fixed: Explicitly typed Object.entries iteration to resolve 'unknown' property issues */}
             {(Object.entries(employeesByDept) as [string, Employee[]][]).map(([dept, deptEmployees]) => (
               <div key={dept} className="space-y-4">
                 <h4 className="text-xl font-black text-slate-800 uppercase px-4">Departamento: {dept}</h4>

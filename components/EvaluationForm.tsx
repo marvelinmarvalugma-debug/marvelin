@@ -59,8 +59,8 @@ export default function EvaluationForm({ employee, evaluatorName, onClose, onSav
   };
 
   return (
-    <div className="bg-white rounded-[40px] shadow-2xl border border-slate-100 overflow-hidden max-w-5xl mx-auto my-4 animate-in fade-in duration-500 print:shadow-none print:border-none print:my-0">
-      {/* Header - Hidden on Print to use specific Document Header */}
+    <div className="bg-white rounded-[40px] shadow-2xl border border-slate-100 overflow-hidden max-w-5xl mx-auto my-4 animate-in fade-in duration-500 print:shadow-none print:border-none print:my-0 print:rounded-none">
+      {/* Header - Oculto en Impresión */}
       <div className="bg-[#003366] p-8 text-white border-b-8 border-[#FFCC00] print:hidden">
         <h2 className="text-2xl font-black tracking-tight">VULCAN EVALUATION SYSTEM</h2>
         <p className="text-base font-black uppercase text-[#FFCC00] mt-2">{employee.name}</p>
@@ -144,116 +144,119 @@ export default function EvaluationForm({ employee, evaluatorName, onClose, onSav
         )}
 
         {step === 4 && (
-          <div className="animate-in zoom-in">
-             {/* Printable Document - Hidden on Screen */}
-             <div className="hidden print:block p-8 bg-white text-slate-900 border-2 border-slate-100 rounded-lg">
-                <div className="flex justify-between items-center border-b-4 border-[#003366] pb-4 mb-6">
+          <div className="animate-in zoom-in space-y-8">
+             {/* Notificación en pantalla */}
+             <div className="bg-emerald-50 border-2 border-emerald-100 p-6 rounded-[32px] text-center print:hidden">
+                <p className="text-emerald-800 font-black uppercase text-xs tracking-widest">¡Evaluación Procesada con Éxito!</p>
+                <p className="text-slate-500 text-[10px] mt-1">El documento oficial está listo para ser emitido y firmado.</p>
+             </div>
+
+             {/* Documento de Certificación (Visible en pantalla y en Impresión) */}
+             <div className="bg-white p-8 lg:p-12 border-2 border-slate-100 rounded-lg shadow-inner max-w-4xl mx-auto print:border-none print:shadow-none print:p-0">
+                <div className="flex justify-between items-center border-b-4 border-[#003366] pb-6 mb-8">
                    <div>
-                      <h1 className="text-2xl font-black text-[#003366] uppercase tracking-tighter">VULCAN ENERGY TECHNOLOGY</h1>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Acta de Evaluación de Desempeño Operativo</p>
+                      <h1 className="text-3xl font-black text-[#003366] uppercase tracking-tighter">VULCAN ENERGY TECHNOLOGY</h1>
+                      <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Acta Oficial de Certificación de Desempeño</p>
                    </div>
                    <div className="text-right">
-                      <p className="text-[9px] font-black uppercase text-slate-400">Fecha de Emisión</p>
+                      <p className="text-[9px] font-black uppercase text-slate-400">Expediente N°</p>
+                      <p className="text-xs font-black">VHR-{Math.random().toString(36).substr(2, 6).toUpperCase()}</p>
+                      <p className="text-[9px] font-black uppercase text-slate-400 mt-2">Fecha</p>
                       <p className="text-xs font-black">{new Date().toLocaleDateString('es-ES')}</p>
                    </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 mb-8 bg-slate-50 p-4 rounded-xl">
+                <div className="grid grid-cols-2 gap-8 mb-10 bg-slate-50 p-6 rounded-2xl border border-slate-100">
                    <div>
-                      <p className="text-[8px] font-black uppercase text-slate-400">Colaborador:</p>
-                      <p className="text-sm font-black text-[#003366] uppercase">{employee.name}</p>
-                      <p className="text-[10px] font-bold text-slate-600">ID: V-{employee.idNumber}</p>
+                      <p className="text-[9px] font-black uppercase text-slate-400 mb-1">Colaborador Evaluado</p>
+                      <p className="text-base font-black text-[#003366] uppercase leading-tight">{employee.name}</p>
+                      <p className="text-[11px] font-bold text-slate-600 mt-1">C.I: V-{employee.idNumber}</p>
                    </div>
                    <div>
-                      <p className="text-[8px] font-black uppercase text-slate-400">Cargo:</p>
-                      <p className="text-sm font-black text-[#003366] uppercase">{employee.role}</p>
-                      <p className="text-[10px] font-bold text-slate-600">Estación: {campo}</p>
+                      <p className="text-[9px] font-black uppercase text-slate-400 mb-1">Unidad Operativa</p>
+                      <p className="text-base font-black text-[#003366] uppercase leading-tight">{employee.role}</p>
+                      <p className="text-[11px] font-bold text-slate-600 mt-1">Estación: {campo}</p>
                    </div>
                 </div>
 
-                <h4 className="text-[10px] font-black uppercase tracking-widest mb-3 text-slate-800">Desglose de Puntuación Técnica</h4>
-                <div className="border border-slate-200 rounded-lg overflow-hidden mb-6">
-                   <table className="w-full text-left text-[9px]">
-                      <thead className="bg-slate-100 border-b border-slate-200">
-                         <tr>
-                            <th className="px-4 py-2 font-black uppercase">Criterio de Evaluación</th>
-                            <th className="px-4 py-2 font-black uppercase text-center">Puntaje</th>
-                         </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                         {criteria.map(c => (
-                            <tr key={c.id}>
-                               <td className="px-4 py-2 font-medium">{c.name}</td>
-                               <td className="px-4 py-2 text-center font-black">{c.score} / 5</td>
-                            </tr>
-                         ))}
-                      </tbody>
-                   </table>
-                </div>
-
-                <div className="flex items-center justify-between mb-8 p-4 bg-[#003366] text-white rounded-xl">
+                <div className="space-y-6">
                    <div>
-                      <p className="text-[8px] font-black uppercase opacity-60 tracking-widest">Puntuación Final Acumulada</p>
-                      <p className="text-3xl font-black">{porcentajeDesempeño.toFixed(1)}%</p>
+                      <h4 className="text-[11px] font-black uppercase tracking-widest mb-4 text-slate-800 border-l-4 border-[#FFCC00] pl-3">Matriz de Resultados Técnicos</h4>
+                      <div className="border border-slate-200 rounded-xl overflow-hidden">
+                         <table className="w-full text-left text-[10px]">
+                            <thead className="bg-slate-100 border-b border-slate-200">
+                               <tr>
+                                  <th className="px-5 py-3 font-black uppercase">Indicador de Cumplimiento</th>
+                                  <th className="px-5 py-3 font-black uppercase text-center">Rango (1-5)</th>
+                               </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                               {criteria.map(c => (
+                                  <tr key={c.id}>
+                                     <td className="px-5 py-2.5 font-medium text-slate-700">{c.name}</td>
+                                     <td className="px-5 py-2.5 text-center font-black text-[#003366]">{c.score} / 5</td>
+                                  </tr>
+                               ))}
+                            </tbody>
+                            <tfoot className="bg-[#001a33] text-white">
+                               <tr>
+                                  <td className="px-5 py-4 font-black uppercase tracking-widest">Puntuación Porcentual Consolidada</td>
+                                  <td className="px-5 py-4 text-center text-xl font-black text-[#FFCC00]">{porcentajeDesempeño.toFixed(1)}%</td>
+                               </tr>
+                            </tfoot>
+                         </table>
+                      </div>
                    </div>
-                   <div className="text-right">
-                      <p className="text-[8px] font-black uppercase opacity-60 tracking-widest">Estatus de Bono</p>
-                      <p className="text-sm font-black uppercase text-[#FFCC00]">
-                         {porcentajeDesempeño >= 98 ? 'AUTORIZACIÓN PENDIENTE' : 'NO CALIFICA'}
+
+                   <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                      <p className="text-[9px] font-black uppercase text-slate-400 mb-2">Comentarios y Observaciones del Evaluador</p>
+                      <p className="text-[11px] text-slate-700 leading-relaxed italic border-l-2 border-[#003366] pl-4 bg-white p-3 rounded-lg min-h-[60px]">
+                         {observaciones || "El colaborador ha cumplido con los parámetros técnicos establecidos para el periodo evaluado. No se reportan incidencias críticas de seguridad SIHOA."}
                       </p>
                    </div>
                 </div>
 
-                <div className="mb-10">
-                   <p className="text-[9px] font-black uppercase text-slate-400 mb-2">Observaciones de la Supervisión:</p>
-                   <p className="text-[10px] text-slate-700 leading-relaxed border-l-2 border-[#003366] pl-3 italic">
-                      {observaciones || "Sin observaciones adicionales reportadas por el evaluador de campo."}
-                   </p>
-                </div>
-
-                {/* Signature Section */}
-                <div className="mt-20 grid grid-cols-2 gap-20">
+                {/* Sección de Firmas Requerida */}
+                <div className="mt-20 grid grid-cols-2 gap-16 lg:gap-32">
                    <div className="text-center">
-                      <div className="border-t-2 border-slate-800 pt-2">
-                         <p className="text-[10px] font-black uppercase text-slate-800">{evaluatorName}</p>
-                         <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Firma del Supervisor</p>
+                      <div className="h-16 flex items-end justify-center">
+                         {/* Espacio para firma manuscrita */}
+                      </div>
+                      <div className="border-t-2 border-[#003366] pt-3">
+                         <p className="text-[11px] font-black uppercase text-[#003366]">{evaluatorName}</p>
+                         <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Supervisor Evaluador</p>
                       </div>
                    </div>
                    <div className="text-center">
-                      <div className="border-t-2 border-slate-800 pt-2">
-                         <p className="text-[10px] font-black uppercase text-slate-800">{employee.name}</p>
-                         <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Firma del Colaborador</p>
+                      <div className="h-16 flex items-end justify-center">
+                         {/* Espacio para firma manuscrita */}
+                      </div>
+                      <div className="border-t-2 border-[#003366] pt-3">
+                         <p className="text-[11px] font-black uppercase text-[#003366]">{employee.name}</p>
+                         <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Colaborador Evaluado</p>
                       </div>
                    </div>
                 </div>
 
-                <div className="mt-12 text-center">
-                   <p className="text-[7px] text-slate-300 font-bold uppercase tracking-[0.3em]">Documento Generado por VulcanHR System • Propiedad de Vulcan Energy Technology</p>
+                <div className="mt-16 text-center border-t border-slate-100 pt-6">
+                   <p className="text-[8px] text-slate-300 font-bold uppercase tracking-[0.4em]">Propiedad Exclusiva de Vulcan Energy Technology • Documento de Uso Interno</p>
                 </div>
              </div>
 
-             {/* Screen Success Message - Hidden on Print */}
-             <div className="space-y-8 text-center print:hidden">
-                <div className="p-12 rounded-[40px] border-2 bg-emerald-50 border-emerald-100 max-w-2xl mx-auto w-full">
-                   <h3 className="text-4xl font-black tracking-tighter uppercase text-emerald-900">Evaluación Exitosa</h3>
-                   <div className="mt-10 mb-6">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Puntaje Técnico</p>
-                      <div className="text-8xl font-black text-[#003366]">{porcentajeDesempeño.toFixed(1)}%</div>
-                   </div>
-                   <div className="w-full bg-slate-200 h-3 rounded-full overflow-hidden max-w-sm mx-auto">
-                      <div className="h-full bg-[#003366]" style={{ width: `${porcentajeDesempeño}%` }}></div>
-                   </div>
-                </div>
-                
-                <div className="flex justify-center gap-4">
-                  <button onClick={onClose} className="px-10 py-5 bg-slate-100 text-slate-400 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-slate-200 transition-colors">Cerrar</button>
-                  <button 
-                    onClick={() => window.print()} 
-                    className="px-10 py-5 bg-[#003366] text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl shadow-blue-900/20 hover:scale-105 transition-all"
-                  >
-                    🖨 Descargar PDF / Imprimir
-                  </button>
-                </div>
+             {/* Acciones Finales - Ocultas en Impresión */}
+             <div className="flex flex-col sm:flex-row justify-center gap-4 py-8 print:hidden">
+                <button 
+                  onClick={onClose} 
+                  className="px-10 py-5 bg-slate-100 text-slate-500 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-slate-200 transition-all"
+                >
+                  Regresar al Panel
+                </button>
+                <button 
+                  onClick={() => window.print()} 
+                  className="px-12 py-5 bg-[#003366] text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-2xl shadow-blue-900/30 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3"
+                >
+                  <span>🖨 EMITIR Y DESCARGAR ACTA</span>
+                </button>
              </div>
           </div>
         )}
