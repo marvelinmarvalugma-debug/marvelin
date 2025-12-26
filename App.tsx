@@ -8,7 +8,7 @@ import EvaluationForm from './components/EvaluationForm';
 import AddEmployeeForm from './components/AddEmployeeForm';
 import MonthlyReportModal from './components/MonthlyReportModal';
 import { INITIAL_EMPLOYEES } from './constants';
-import { Employee, FullEvaluation, Department, AUTHORIZED_EVALUATORS, BONUS_APPROVER, BonusStatus, VulcanNotification } from './types';
+import { Employee, FullEvaluation, Department, AUTHORIZED_EVALUATORS, BONUS_APPROVER, BonusStatus, VulcanNotification, KPI } from './types';
 
 const App: React.FC = () => {
   const [currentEvaluator, setCurrentEvaluator] = useState<string | null>(null);
@@ -122,8 +122,17 @@ const App: React.FC = () => {
   }
 
   const renderContent = () => {
+    // Fixed: Properly typed baseKpis and newEmp to avoid 'unknown' issues in map
     if (isAddingEmployee) return <div className="py-8"><AddEmployeeForm onAdd={(data) => {
-      const newEmp = { ...data, id: Math.random().toString(36).substr(2, 9), kpis: (employees[0]?.kpis || []).map(k => ({...k, score: 0})), lastEvaluation: 'Pendiente', summary: '', notifications: [] };
+      const baseKpis: KPI[] = employees.length > 0 ? employees[0].kpis : [];
+      const newEmp: Employee = { 
+        ...data, 
+        id: Math.random().toString(36).substr(2, 9), 
+        kpis: baseKpis.map(k => ({...k, score: 0})), 
+        lastEvaluation: 'Pendiente', 
+        summary: '', 
+        notifications: [] 
+      };
       setEmployees(prev => [newEmp, ...prev]);
       setIsAddingEmployee(false);
     }} onCancel={() => setIsAddingEmployee(false)} /></div>;
@@ -168,7 +177,8 @@ const App: React.FC = () => {
         }
         return (
           <div className="space-y-10">
-            {Object.entries(employeesByDept).map(([dept, deptEmployees]) => (
+            {/* Fixed: Explicitly typed Object.entries iteration to resolve 'unknown' property issues */}
+            {(Object.entries(employeesByDept) as [string, Employee[]][]).map(([dept, deptEmployees]) => (
               <div key={dept} className="space-y-4">
                 <h4 className="text-xl font-black text-slate-800 uppercase px-4">Departamento: {dept}</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
