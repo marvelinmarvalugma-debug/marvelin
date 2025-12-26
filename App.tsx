@@ -22,14 +22,12 @@ const App: React.FC = () => {
 
   const isJaquelin = currentEvaluator === BONUS_APPROVER;
 
-  // Filtrar empleados según el evaluador actual
   const filteredEmployees = useMemo(() => {
     if (!currentEvaluator) return [];
     if (isJaquelin) return employees;
     return employees.filter(emp => emp.managerName === currentEvaluator);
   }, [employees, currentEvaluator, isJaquelin]);
 
-  // Filtrar historial de evaluaciones para el reporte
   const filteredEvaluationsForReport = useMemo<FullEvaluation[]>(() => {
     if (isJaquelin) return evaluationsHistory;
     return evaluationsHistory.filter((ev: FullEvaluation) => ev.evaluador === currentEvaluator);
@@ -52,29 +50,24 @@ const App: React.FC = () => {
 
   const handleApproveBonus = (employeeId: string) => {
     const today = new Date().toLocaleDateString('es-ES');
-    
     setEvaluationsHistory(prev => prev.map(ev => {
       if (ev.employeeId === employeeId && ev.condicionBono === BonusStatus.PendingAuth) {
         return { ...ev, condicionBono: BonusStatus.Approved, authorizedBy: BONUS_APPROVER };
       }
       return ev;
     }));
-
     setEmployees(prev => prev.map(emp => {
       if (emp.id === employeeId) {
         const newNotification: VulcanNotification = {
           id: Math.random().toString(36).substr(2, 9),
           employeeId: emp.id,
           title: "¡BONO AUTORIZADO!",
-          message: `La Dirección General (${BONUS_APPROVER}) ha autorizado su bono de alto desempeño correspondiente a este período.`,
+          message: `La Dirección General (${BONUS_APPROVER}) ha autorizado su bono correspondiente.`,
           date: today,
           type: 'bonus',
           read: false
         };
-        return {
-          ...emp,
-          notifications: [newNotification, ...(emp.notifications || [])]
-        };
+        return { ...emp, notifications: [newNotification, ...(emp.notifications || [])] };
       }
       return emp;
     }));
@@ -109,17 +102,13 @@ const App: React.FC = () => {
         <div className="bg-white rounded-[40px] shadow-2xl max-w-md w-full p-10 text-center animate-in zoom-in duration-500">
           <h1 className="text-3xl font-black text-[#003366] tracking-tighter mb-2">VULCAN<span className="text-[#FFCC00]">HR</span></h1>
           <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mb-8">Acceso de Personal Autorizado</p>
-          
           <div className="space-y-3">
-            <p className="text-xs font-bold text-slate-500 uppercase mb-4">Seleccione su Identidad</p>
             {AUTHORIZED_EVALUATORS.map(name => (
               <button
                 key={name}
                 onClick={() => setCurrentEvaluator(name)}
                 className={`w-full p-4 border-2 rounded-2xl text-sm font-bold flex justify-between items-center group transition-all ${
-                  name === BONUS_APPROVER 
-                    ? 'bg-[#003366] text-[#FFCC00] border-[#003366] hover:bg-[#002244]' 
-                    : 'bg-slate-50 border-slate-100 text-[#003366] hover:border-[#003366]'
+                  name === BONUS_APPROVER ? 'bg-[#003366] text-[#FFCC00] border-[#003366]' : 'bg-slate-50 border-slate-100 text-[#003366]'
                 }`}
               >
                 {name}
@@ -145,73 +134,29 @@ const App: React.FC = () => {
 
     switch (activeTab) {
       case 'dashboard': return <Dashboard employees={filteredEmployees} />;
-      case 'employees': return <EmployeeList employees={filteredEmployees} onSelect={setSelectedEmployee} onAddNew={() => setIsAddingEmployee(true)} onBulkAdd={(text) => {
-        const lines = text.split('\n');
-        const batch = lines.map(l => {
-          const p = l.split('\t');
-          if (p.length < 2) return null;
-          const defaultKpis = [
-            { id: 'k1', name: 'Productividad', score: 0, weight: 40 },
-            { id: 'k2', name: 'Calidad Operativa', score: 0, weight: 30 },
-            { id: 'k3', name: 'Seguridad SIHOA', score: 0, weight: 30 }
-          ];
-          return { 
-            id: Math.random().toString(36).substr(2, 9), 
-            idNumber: p[0], 
-            name: p[1], 
-            role: p[2] || 'TECNICO', 
-            department: Department.Operations, 
-            photo: `https://picsum.photos/seed/${p[0]}/200/200`, 
-            managerName: currentEvaluator, 
-            managerRole: isJaquelin ? 'Director' : 'Supervisor', 
-            lastEvaluation: 'Pendiente', 
-            summary: '', 
-            kpis: defaultKpis, 
-            notifications: [] 
-          };
-        }).filter(Boolean) as Employee[];
-        
-        setEmployees(batch);
-        setEvaluationsHistory([]);
-        setActiveTab('employees');
-      }} />;
+      case 'employees': return <EmployeeList employees={filteredEmployees} onSelect={setSelectedEmployee} onAddNew={() => setIsAddingEmployee(true)} />;
       case 'evaluations':
         if (isJaquelin) {
           const pending = getPendingApprovals();
           return (
             <div className="space-y-10">
               <div className="bg-[#001a33] rounded-[40px] p-10 text-white shadow-2xl border-b-8 border-[#FFCC00]">
-                 <h3 className="text-3xl font-black tracking-tight uppercase">Control de Bonos Especiales</h3>
-                 <p className="text-[#FFCC00] mt-2 text-sm font-bold leading-relaxed">Bienvenida Directora {BONUS_APPROVER}. Usted debe autorizar únicamente los bonos de alto desempeño.</p>
+                 <h3 className="text-3xl font-black tracking-tight uppercase">Control de Bonos</h3>
+                 <p className="text-[#FFCC00] mt-2 text-sm font-bold">Autorice los beneficios por alto desempeño técnico.</p>
               </div>
-              
               <div className="bg-white rounded-[40px] p-10 border border-slate-100 shadow-sm">
-                <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-8">Solicitudes Pendientes ({pending.length})</h4>
-                {pending.length === 0 ? (
-                  <div className="text-center py-10">
-                    <p className="text-slate-300 font-bold uppercase text-xs"> No hay bonos pendientes de autorización técnica por ahora.</p>
-                  </div>
-                ) : (
+                <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-8">Pendientes ({pending.length})</h4>
+                {pending.length === 0 ? <p className="text-center py-10 text-slate-300 font-bold uppercase text-xs">No hay bonos pendientes.</p> : (
                   <div className="space-y-4">
                     {pending.map(ev => {
                       const emp = employees.find(e => e.id === ev.employeeId);
                       return (
                         <div key={ev.employeeId} className="flex items-center justify-between p-6 bg-slate-50 rounded-3xl border border-slate-100">
                           <div className="flex items-center space-x-4">
-                             <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center font-black text-indigo-600">
-                               {(ev.promedioFinal * 20).toFixed(0)}%
-                             </div>
-                             <div>
-                               <p className="font-black text-slate-800 uppercase text-sm">{emp?.name}</p>
-                               <p className="text-[10px] text-slate-400 font-bold uppercase">Evaluado por: {ev.evaluador}</p>
-                             </div>
+                             <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center font-black text-indigo-600">{(ev.promedioFinal * 20).toFixed(0)}%</div>
+                             <div><p className="font-black text-slate-800 uppercase text-sm">{emp?.name}</p></div>
                           </div>
-                          <button 
-                            onClick={() => handleApproveBonus(ev.employeeId)}
-                            className="bg-[#003366] text-white px-8 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-[#FFCC00] hover:text-[#003366] transition-all"
-                          >
-                            Autorizar Bono
-                          </button>
+                          <button onClick={() => handleApproveBonus(ev.employeeId)} className="bg-[#003366] text-white px-8 py-3 rounded-2xl font-black uppercase text-[10px]">Autorizar Bono</button>
                         </div>
                       );
                     })}
@@ -221,42 +166,24 @@ const App: React.FC = () => {
             </div>
           );
         }
-
         return (
           <div className="space-y-10">
-            <div className="bg-[#003366] rounded-[40px] p-10 text-white shadow-2xl relative overflow-hidden">
-               <div className="relative z-10 max-w-lg">
-                 <h3 className="text-3xl font-black tracking-tight uppercase">Matriz de Campo</h3>
-                 <p className="text-blue-200 mt-2 text-sm leading-relaxed">Bienvenido, <strong>{currentEvaluator}</strong>. Complete las evaluaciones mensuales.</p>
-               </div>
-            </div>
-
             {Object.entries(employeesByDept).map(([dept, deptEmployees]) => (
               <div key={dept} className="space-y-4">
-                <div className="flex items-center space-x-4 px-4">
-                  <span className="w-2 h-8 bg-[#FFCC00] rounded-full"></span>
-                  <h4 className="text-xl font-black text-slate-800 uppercase tracking-tighter">Departamento: {dept}</h4>
-                </div>
-                
+                <h4 className="text-xl font-black text-slate-800 uppercase px-4">Departamento: {dept}</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {deptEmployees.map(emp => {
                     const evaluated = hasBeenEvaluatedThisMonth(emp.id);
                     return (
-                      <div key={emp.id} className={`bg-white rounded-3xl p-6 border-2 transition-all ${evaluated ? 'border-emerald-100 opacity-60' : 'border-slate-50 shadow-sm hover:border-[#003366]'}`}>
+                      <div key={emp.id} className={`bg-white rounded-3xl p-6 border-2 transition-all ${evaluated ? 'border-emerald-100 opacity-60' : 'border-slate-50 hover:border-[#003366]'}`}>
                         <div className="flex justify-between items-start mb-4">
                           <img src={emp.photo} className="w-12 h-12 rounded-full grayscale" />
-                          {evaluated ? (
-                            <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full uppercase">Evaluado ✓</span>
-                          ) : (
-                            <span className="text-[9px] font-black text-amber-600 bg-amber-50 px-3 py-1 rounded-full uppercase">Pendiente</span>
-                          )}
+                          <span className={`text-[9px] font-black px-3 py-1 rounded-full uppercase ${evaluated ? 'text-emerald-600 bg-emerald-50' : 'text-amber-600 bg-amber-50'}`}>
+                            {evaluated ? 'Evaluado ✓' : 'Pendiente'}
+                          </span>
                         </div>
                         <h5 className="font-bold text-slate-800 uppercase text-sm truncate">{emp.name}</h5>
-                        <button 
-                          disabled={evaluated}
-                          onClick={() => setEvaluatingEmployee(emp)}
-                          className={`w-full mt-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${evaluated ? 'bg-slate-100 text-slate-400' : 'bg-[#003366] text-white hover:bg-[#002244] shadow-lg shadow-blue-900/10'}`}
-                        >
+                        <button disabled={evaluated} onClick={() => setEvaluatingEmployee(emp)} className={`w-full mt-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest ${evaluated ? 'bg-slate-100 text-slate-400' : 'bg-[#003366] text-white'}`}>
                           {evaluated ? 'Reporte Listo' : 'Iniciar Evaluación'}
                         </button>
                       </div>
@@ -272,21 +199,9 @@ const App: React.FC = () => {
   };
 
   return (
-    <Layout 
-      activeTab={evaluatingEmployee || isAddingEmployee ? 'evaluations' : activeTab} 
-      setActiveTab={setActiveTab}
-      onDownloadReports={() => setShowReportsModal(true)}
-      evaluatorName={currentEvaluator}
-      onChangeEvaluator={() => setCurrentEvaluator(null)}
-    >
+    <Layout activeTab={evaluatingEmployee || isAddingEmployee ? 'evaluations' : activeTab} setActiveTab={setActiveTab} onDownloadReports={() => setShowReportsModal(true)} evaluatorName={currentEvaluator} onChangeEvaluator={() => setCurrentEvaluator(null)}>
       {renderContent()}
-      {showReportsModal && (
-        <MonthlyReportModal 
-          evaluations={filteredEvaluationsForReport} 
-          employees={filteredEmployees} 
-          onClose={() => setShowReportsModal(false)} 
-        />
-      )}
+      {showReportsModal && <MonthlyReportModal evaluations={filteredEvaluationsForReport} employees={filteredEmployees} onClose={() => setShowReportsModal(false)} />}
     </Layout>
   );
 };
