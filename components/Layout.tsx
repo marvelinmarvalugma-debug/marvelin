@@ -34,61 +34,61 @@ const Layout: React.FC<LayoutProps> = ({
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-100 font-sans">
-      {/* Sidebar Overlay for Mobile */}
+    <div className="flex h-screen bg-slate-100 font-sans overflow-hidden">
+      {/* Sidebar Overlay para Mobile */}
       {isSidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden backdrop-blur-sm"
+          className="fixed inset-0 bg-[#001a33]/60 z-[60] lg:hidden backdrop-blur-sm transition-opacity"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
 
-      {/* Sidebar */}
+      {/* Sidebar - Ahora ESTÁTICO/FIJO en escritorio */}
       <aside className={`
-        fixed lg:static inset-y-0 left-0 z-50 w-64 bg-[#001a33] text-white flex flex-col shadow-2xl transition-transform duration-300 transform
+        fixed inset-y-0 left-0 z-[70] w-64 bg-[#001a33] text-white flex flex-col shadow-2xl transition-transform duration-300
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         print:hidden
       `}>
-        <div className="p-6 border-b border-white/5 flex justify-between items-center">
+        <div className="p-8 border-b border-white/5 flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-black tracking-tighter text-white">VULCAN<span className="text-[#FFCC00]">HR</span></h1>
-            <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-[0.2em] font-bold">Energy Technology</p>
+            <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-[0.2em] font-black">Energy Technology</p>
           </div>
-          <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden text-slate-400 p-2">✕</button>
+          <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden text-white bg-white/10 p-2 rounded-xl">✕</button>
         </div>
         
-        <nav className="flex-1 mt-6">
+        <nav className="flex-1 mt-8">
           {navItems.map((item) => (
             <button
               key={item.id}
               onClick={() => handleTabChange(item.id)}
-              className={`w-full flex items-center px-6 py-4 transition-all duration-300 ${
+              className={`w-full flex items-center px-8 py-5 transition-all duration-300 ${
                 activeTab === item.id 
-                  ? 'bg-[#003366] text-[#FFCC00] border-r-4 border-[#FFCC00] shadow-inner' 
+                  ? 'bg-[#003366] text-[#FFCC00] border-r-8 border-[#FFCC00] shadow-inner' 
                   : 'text-slate-400 hover:bg-white/5 hover:text-white'
               }`}
             >
-              <span className="text-xl mr-3 opacity-80">{item.icon}</span>
-              <span className="font-bold text-sm tracking-wide">{item.label}</span>
+              <span className="text-2xl mr-4">{item.icon}</span>
+              <span className="font-black text-sm uppercase tracking-widest">{item.label}</span>
             </button>
           ))}
         </nav>
 
         {evaluatorName && (
-          <div className="p-6 border-t border-white/5">
-            <div className={`p-4 rounded-2xl border ${isJaquelin ? 'bg-indigo-900/30 border-[#FFCC00]/50' : 'bg-white/5 border-white/10'}`}>
+          <div className="p-8 border-t border-white/5 bg-[#001326]">
+            <div className={`p-5 rounded-3xl border-2 ${isJaquelin ? 'bg-indigo-900/30 border-[#FFCC00]/50' : 'bg-white/5 border-white/10'}`}>
               <div className="flex items-center">
-                <div className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-xs font-black ${isJaquelin ? 'bg-[#FFCC00] text-[#003366]' : 'bg-[#003366] text-white'}`}>
+                <div className={`shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center text-sm font-black ${isJaquelin ? 'bg-[#FFCC00] text-[#003366]' : 'bg-[#003366] text-white shadow-lg'}`}>
                   {evaluatorName.split(' ')[0][0]}
                 </div>
-                <div className="ml-3 overflow-hidden">
-                  <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{isJaquelin ? 'Director' : 'Evaluador'}</p>
-                  <p className="text-xs font-bold truncate text-white uppercase">{evaluatorName}</p>
+                <div className="ml-4 overflow-hidden">
+                  <p className="text-[9px] text-slate-400 font-black uppercase tracking-[0.2em]">{isJaquelin ? 'Director' : 'Evaluador'}</p>
+                  <p className="text-[11px] font-black truncate text-white uppercase mt-0.5">{evaluatorName}</p>
                 </div>
               </div>
               <button 
                 onClick={onChangeEvaluator}
-                className="mt-3 w-full text-[9px] font-black uppercase text-[#FFCC00] hover:text-white transition-colors border border-[#FFCC00]/30 py-1 rounded-lg"
+                className="mt-4 w-full text-[9px] font-black uppercase text-[#FFCC00] hover:text-white transition-colors border-2 border-[#FFCC00]/20 py-2.5 rounded-xl tracking-widest"
               >
                 Cerrar Sesión
               </button>
@@ -97,33 +97,35 @@ const Layout: React.FC<LayoutProps> = ({
         )}
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 overflow-y-auto bg-slate-100 print:bg-white print:overflow-visible">
-        <header className="sticky top-0 z-30 bg-white shadow-sm border-b border-slate-200 px-4 lg:px-8 py-3 lg:py-4 flex justify-between items-center print:hidden">
+      {/* Contenedor Principal - Ajustado para Sidebar Fijo */}
+      <div className="flex-1 flex flex-col min-w-0 lg:ml-64 print:ml-0 transition-all duration-300">
+        <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md shadow-sm border-b border-slate-100 px-6 lg:px-10 py-4 lg:py-5 flex justify-between items-center print:hidden">
           <div className="flex items-center">
             <button 
               onClick={() => setIsSidebarOpen(true)}
-              className="lg:hidden mr-3 p-2 text-slate-500 hover:bg-slate-100 rounded-lg"
+              className="lg:hidden mr-4 p-3 bg-[#001a33] text-white rounded-2xl shadow-lg active:scale-90 transition-transform"
             >
-              <span className="text-2xl">☰</span>
+              <span className="text-xl">☰</span>
             </button>
             <div>
-              <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">{activeTab}</h2>
-              <p className="text-sm lg:text-lg font-bold text-slate-800 leading-tight">
-                {isJaquelin ? 'Gestión de Beneficios' : 'Panel Operativo'}
+              <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] leading-none mb-1.5">{activeTab}</h2>
+              <p className="text-base lg:text-xl font-black text-slate-800 leading-tight uppercase tracking-tight">
+                {isJaquelin ? 'Gestión de Beneficios' : 'Sistema de Evaluación Técnica'}
               </p>
             </div>
           </div>
-          <div className="flex items-center space-x-2 lg:space-x-6">
-            <div className="hidden md:flex flex-col text-right">
-              <span className="text-xs font-bold text-slate-800 uppercase">{evaluatorName || 'SISTEMA'}</span>
-              <span className={`text-[10px] font-bold uppercase tracking-widest ${isJaquelin ? 'text-[#FFCC00]' : 'text-emerald-500'}`}>
-                ● Sesión Activa
+          
+          <div className="flex items-center gap-4 lg:gap-8">
+            <div className="hidden xl:flex flex-col text-right">
+              <span className="text-[11px] font-black text-slate-800 uppercase tracking-widest">{evaluatorName || 'SISTEMA'}</span>
+              <span className={`text-[9px] font-black uppercase tracking-[0.2em] mt-1 ${isJaquelin ? 'text-[#003366]' : 'text-emerald-500'}`}>
+                ● CONEXIÓN SEGURA
               </span>
             </div>
+            
             <button 
               onClick={onDownloadReports}
-              className="bg-[#003366] text-white px-3 lg:px-5 py-2 rounded-xl font-black text-[10px] lg:text-xs hover:bg-[#002244] transition-all shadow-lg shadow-blue-900/10 uppercase tracking-widest"
+              className="bg-[#003366] text-white px-5 lg:px-8 py-3 rounded-2xl font-black text-[10px] lg:text-xs hover:bg-[#002244] transition-all shadow-2xl shadow-blue-900/20 uppercase tracking-[0.2em]"
             >
               <span className="lg:inline hidden">RESUMEN NÓMINA</span>
               <span className="lg:hidden">REPORTE</span>
@@ -131,10 +133,13 @@ const Layout: React.FC<LayoutProps> = ({
           </div>
         </header>
 
-        <div className="p-4 lg:p-8 print:p-0">
-          {children}
-        </div>
-      </main>
+        {/* Scrollable Content Area */}
+        <main className="flex-1 overflow-y-auto p-6 lg:p-10 bg-slate-50 print:bg-white print:p-0">
+          <div className="max-w-7xl mx-auto">
+            {children}
+          </div>
+        </main>
+      </div>
     </div>
   );
 };

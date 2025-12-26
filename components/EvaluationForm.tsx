@@ -15,7 +15,12 @@ const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "
 
 export default function EvaluationForm({ employee, evaluatorName, onClose, onSave }: EvaluationFormProps) {
   const currentYear = new Date().getFullYear();
-  const lastYear = currentYear - 1;
+  const startYear = currentYear - 1;
+  const endYear = 2030;
+  
+  // Generar array de años desde startYear hasta 2030
+  const yearsRange = Array.from({ length: endYear - startYear + 1 }, (_, i) => (startYear + i).toString());
+
   const currentMonthName = new Date().toLocaleString('es-ES', { month: 'long' }).toLowerCase();
 
   const [step, setStep] = useState(1);
@@ -85,8 +90,9 @@ export default function EvaluationForm({ employee, evaluatorName, onClose, onSav
                 <div className="space-y-2">
                   <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Año</label>
                   <select value={anio} onChange={e => setAnio(e.target.value)} className="w-full p-4 border-2 border-slate-50 rounded-2xl bg-slate-50 font-black uppercase text-[#003366] outline-none focus:border-[#003366] cursor-pointer text-sm">
-                    <option value={currentYear}>{currentYear}</option>
-                    <option value={lastYear}>{lastYear}</option>
+                    {yearsRange.map(y => (
+                      <option key={y} value={y}>{y}</option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -103,21 +109,21 @@ export default function EvaluationForm({ employee, evaluatorName, onClose, onSav
               <table className="w-full text-left text-sm min-w-[500px]">
                 <thead className="bg-slate-50">
                   <tr>
-                    <th className="px-6 py-5 font-black text-slate-400 text-[9px] uppercase tracking-widest">Criterio</th>
+                    <th className="px-6 py-5 font-black text-slate-400 text-[9px] uppercase tracking-widest">Criterio de Evaluación</th>
                     <th className="px-6 py-5 font-black text-slate-400 text-[9px] uppercase tracking-widest text-center">Puntos (1-5)</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {criteria.map(c => (
                     <tr key={c.id}>
-                      <td className="px-6 py-5">
-                        <p className="font-black text-[#003366] uppercase text-[10px]">{c.name}</p>
-                        <p className="text-[9px] text-slate-400 italic">{c.description}</p>
+                      <td className="px-6 py-6">
+                        <p className="font-black text-[#003366] uppercase text-sm mb-1">{c.name}</p>
+                        <p className="text-xs text-slate-400 italic leading-snug">{c.description}</p>
                       </td>
-                      <td className="px-6 py-5 text-center">
+                      <td className="px-6 py-6 text-center">
                         <div className="flex justify-center gap-1">
                           {[1, 2, 3, 4, 5].map(v => (
-                            <button key={v} onClick={() => handleScoreChange(c.id, v)} className={`w-9 h-9 rounded-xl font-black border-2 ${c.score === v ? 'bg-[#003366] text-white border-[#003366]' : 'bg-white text-slate-200 border-slate-50'}`}>{v}</button>
+                            <button key={v} onClick={() => handleScoreChange(c.id, v)} className={`w-10 h-10 rounded-xl font-black border-2 ${c.score === v ? 'bg-[#003366] text-white border-[#003366]' : 'bg-white text-slate-200 border-slate-50'}`}>{v}</button>
                           ))}
                         </div>
                       </td>
@@ -185,7 +191,7 @@ export default function EvaluationForm({ employee, evaluatorName, onClose, onSav
                    <div>
                       <h4 className="text-[11px] font-black uppercase tracking-widest mb-4 text-slate-800 border-l-4 border-[#FFCC00] pl-3">Matriz de Resultados Técnicos</h4>
                       <div className="border border-slate-200 rounded-xl overflow-hidden">
-                         <table className="w-full text-left text-[10px]">
+                         <table className="w-full text-left text-xs">
                             <thead className="bg-slate-100 border-b border-slate-200">
                                <tr>
                                   <th className="px-5 py-3 font-black uppercase">Indicador de Cumplimiento</th>
@@ -195,8 +201,8 @@ export default function EvaluationForm({ employee, evaluatorName, onClose, onSav
                             <tbody className="divide-y divide-slate-100">
                                {criteria.map(c => (
                                   <tr key={c.id}>
-                                     <td className="px-5 py-2.5 font-medium text-slate-700">{c.name}</td>
-                                     <td className="px-5 py-2.5 text-center font-black text-[#003366]">{c.score} / 5</td>
+                                     <td className="px-5 py-3 font-medium text-slate-700">{c.name}</td>
+                                     <td className="px-5 py-3 text-center font-black text-[#003366]">{c.score} / 5</td>
                                   </tr>
                                ))}
                             </tbody>
