@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
 import EmployeeList from './components/EmployeeList';
@@ -7,18 +7,42 @@ import EmployeeDetails from './components/EmployeeDetails';
 import EvaluationForm from './components/EvaluationForm';
 import AddEmployeeForm from './components/AddEmployeeForm';
 import MonthlyReportModal from './components/MonthlyReportModal';
-import { INITIAL_EMPLOYEES } from './constants';
+import SyncPanel from './components/SyncPanel';
+import { VulcanDB } from './services/storageService';
 import { Employee, FullEvaluation, Department, AUTHORIZED_EVALUATORS, BONUS_APPROVER, BonusStatus, VulcanNotification, KPI } from './types';
 
 const App: React.FC = () => {
+  const [isInitialized, setIsInitialized] = useState(false);
   const [currentEvaluator, setCurrentEvaluator] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [employees, setEmployees] = useState<Employee[]>(INITIAL_EMPLOYEES);
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [evaluationsHistory, setEvaluationsHistory] = useState<FullEvaluation[]>([]);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [evaluatingEmployee, setEvaluatingEmployee] = useState<Employee | null>(null);
   const [isAddingEmployee, setIsAddingEmployee] = useState(false);
   const [showReportsModal, setShowReportsModal] = useState(false);
+  const [showSync, setShowSync] = useState(false);
+
+  // Carga inicial desde la Base de Datos Local
+  useEffect(() => {
+    VulcanDB.initialize();
+    setEmployees(VulcanDB.getEmployees());
+    setEvaluationsHistory(VulcanDB.getEvaluations());
+    setIsInitialized(true);
+  }, []);
+
+  // Persistencia automática ante cualquier cambio
+  useEffect(() => {
+    if (isInitialized) {
+      VulcanDB.saveEmployees(employees);
+    }
+  }, [employees, isInitialized]);
+
+  useEffect(() => {
+    if (isInitialized) {
+      VulcanDB.saveEvaluations(evaluationsHistory);
+    }
+  }, [evaluationsHistory, isInitialized]);
 
   const isJaquelin = currentEvaluator === BONUS_APPROVER;
 
@@ -44,8 +68,35 @@ const App: React.FC = () => {
           } 
         : emp
     ));
-    // No cerramos el formulario inmediatamente si queremos que el usuario descargue el PDF
-    // La navegación la controlará el botón "Regresar" del propio EvaluationForm
+  };
+
+  const handleBulkAdd = (data: string) => {
+    const lines = data.split('\n');
+    const newEmps: Employee[] = [];
+    lines.forEach(line => {
+      const parts = line.split('\t');
+      if (parts.length >= 3) {
+        newEmps.push({
+          id: Math.random().toString(36).substr(2, 9),
+          idNumber: parts[0].trim(),
+          name: parts[1].trim(),
+          role: parts[2].trim(),
+          department: Department.Operations,
+          photo: `https://picsum.photos/seed/${Math.random()}/200/200`,
+          managerName: currentEvaluator || AUTHORIZED_EVALUATORS[0],
+          managerRole: 'Supervisor de Área',
+          lastEvaluation: 'Pendiente',
+          summary: '',
+          kpis: [
+            { id: 'k1', name: 'Productividad', score: 0, weight: 40 },
+            { id: 'k2', name: 'Calidad Operativa', score: 0, weight: 30 },
+            { id: 'k3', name: 'Seguridad SIHOA', score: 0, weight: 30 }
+          ],
+          notifications: []
+        });
+      }
+    });
+    setEmployees(prev => [...newEmps, ...prev]);
   };
 
   const handleApproveBonus = (employeeId: string) => {
@@ -100,14 +151,17 @@ const App: React.FC = () => {
     return (
       <div className="min-h-screen bg-[#001a33] flex items-center justify-center p-6">
         <div className="bg-white rounded-[40px] shadow-2xl max-w-md w-full p-10 text-center animate-in zoom-in duration-500">
+          <div className="mb-6 flex justify-center">
+            <div className="w-16 h-1 bg-[#FFCC00] rounded-full"></div>
+          </div>
           <h1 className="text-3xl font-black text-[#003366] tracking-tighter mb-2">VULCAN<span className="text-[#FFCC00]">HR</span></h1>
-          <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mb-8">Acceso de Personal Autorizado</p>
+          <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mb-8">Base de Datos de Desempeño</p>
           <div className="space-y-3">
             {AUTHORIZED_EVALUATORS.map(name => (
               <button
                 key={name}
                 onClick={() => setCurrentEvaluator(name)}
-                className={`w-full p-4 border-2 rounded-2xl text-sm font-bold flex justify-between items-center group transition-all ${
+                className={`w-full p-4 border-2 rounded-2xl text-sm font-bold flex justify-between items-center group transition-all hover:scale-[1.02] active:scale-95 ${
                   name === BONUS_APPROVER ? 'bg-[#003366] text-[#FFCC00] border-[#003366]' : 'bg-slate-50 border-slate-100 text-[#003366]'
                 }`}
               >
@@ -116,14 +170,21 @@ const App: React.FC = () => {
               </button>
             ))}
           </div>
+          <p className="mt-8 text-[9px] text-slate-300 font-bold uppercase tracking-widest">Almacenamiento Local Activado</p>
         </div>
       </div>
     );
   }
 
   const renderContent = () => {
+    if (showSync) return <div className="py-8"><SyncPanel onComplete={() => setShowSync(false)} /></div>;
+
     if (isAddingEmployee) return <div className="py-8"><AddEmployeeForm onAdd={(data) => {
-      const baseKpis: KPI[] = employees.length > 0 ? employees[0].kpis : [];
+      const baseKpis: KPI[] = employees.length > 0 ? employees[0].kpis : [
+        { id: 'k1', name: 'Productividad', score: 0, weight: 40 },
+        { id: 'k2', name: 'Calidad Operativa', score: 0, weight: 30 },
+        { id: 'k3', name: 'Seguridad SIHOA', score: 0, weight: 30 }
+      ];
       const newEmp: Employee = { 
         ...data, 
         id: Math.random().toString(36).substr(2, 9), 
@@ -142,7 +203,7 @@ const App: React.FC = () => {
 
     switch (activeTab) {
       case 'dashboard': return <Dashboard employees={filteredEmployees} />;
-      case 'employees': return <EmployeeList employees={filteredEmployees} onSelect={setSelectedEmployee} onAddNew={() => setIsAddingEmployee(true)} />;
+      case 'employees': return <EmployeeList employees={filteredEmployees} onSelect={setSelectedEmployee} onAddNew={() => setIsAddingEmployee(true)} onBulkAdd={handleBulkAdd} />;
       case 'evaluations':
         if (isJaquelin) {
           const pending = getPendingApprovals();
@@ -207,7 +268,14 @@ const App: React.FC = () => {
   };
 
   return (
-    <Layout activeTab={evaluatingEmployee || isAddingEmployee ? 'evaluations' : activeTab} setActiveTab={setActiveTab} onDownloadReports={() => setShowReportsModal(true)} evaluatorName={currentEvaluator} onChangeEvaluator={() => setCurrentEvaluator(null)}>
+    <Layout 
+      activeTab={showSync ? 'Sincronización' : activeTab} 
+      setActiveTab={(tab) => { setActiveTab(tab); setShowSync(false); }} 
+      onDownloadReports={() => setShowReportsModal(true)} 
+      onOpenSync={() => { setShowSync(true); setSelectedEmployee(null); setEvaluatingEmployee(null); setIsAddingEmployee(false); }}
+      evaluatorName={currentEvaluator} 
+      onChangeEvaluator={() => setCurrentEvaluator(null)}
+    >
       {renderContent()}
       {showReportsModal && <MonthlyReportModal evaluations={filteredEvaluationsForReport} employees={filteredEmployees} onClose={() => setShowReportsModal(false)} />}
     </Layout>

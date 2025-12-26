@@ -1,12 +1,14 @@
 
 import React, { useState } from 'react';
 import { BONUS_APPROVER } from '../types';
+import { VulcanDB } from '../services/storageService';
 
 interface LayoutProps {
   children: React.ReactNode;
   activeTab: string;
   setActiveTab: (tab: string) => void;
   onDownloadReports?: () => void;
+  onOpenSync?: () => void;
   evaluatorName?: string | null;
   onChangeEvaluator?: () => void;
 }
@@ -16,6 +18,7 @@ const Layout: React.FC<LayoutProps> = ({
   activeTab, 
   setActiveTab, 
   onDownloadReports,
+  onOpenSync,
   evaluatorName,
   onChangeEvaluator
 }) => {
@@ -43,7 +46,7 @@ const Layout: React.FC<LayoutProps> = ({
         />
       )}
 
-      {/* Sidebar - Ahora ESTÁTICO/FIJO en escritorio */}
+      {/* Sidebar */}
       <aside className={`
         fixed inset-y-0 left-0 z-[70] w-64 bg-[#001a33] text-white flex flex-col shadow-2xl transition-transform duration-300
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
@@ -72,7 +75,25 @@ const Layout: React.FC<LayoutProps> = ({
               <span className="font-black text-sm uppercase tracking-widest">{item.label}</span>
             </button>
           ))}
+
+          {/* Sincronización */}
+          <button
+            onClick={onOpenSync}
+            className="w-full flex items-center px-8 py-5 text-slate-400 hover:bg-white/5 hover:text-white transition-all"
+          >
+            <span className="text-2xl mr-4">☁️</span>
+            <span className="font-black text-sm uppercase tracking-widest">Sincronizar</span>
+          </button>
         </nav>
+
+        <div className="p-6">
+          <button 
+            onClick={() => { if(confirm("¿Borrar todos los datos locales?")) VulcanDB.reset(); }}
+            className="w-full py-3 border border-white/10 rounded-xl text-[8px] font-black uppercase text-slate-500 hover:text-rose-400 transition-all tracking-widest"
+          >
+            Reset Database ⚙️
+          </button>
+        </div>
 
         {evaluatorName && (
           <div className="p-8 border-t border-white/5 bg-[#001326]">
@@ -97,7 +118,7 @@ const Layout: React.FC<LayoutProps> = ({
         )}
       </aside>
 
-      {/* Contenedor Principal - Ajustado para Sidebar Fijo */}
+      {/* Contenedor Principal */}
       <div className="flex-1 flex flex-col min-w-0 lg:ml-64 print:ml-0 transition-all duration-300">
         <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md shadow-sm border-b border-slate-100 px-6 lg:px-10 py-4 lg:py-5 flex justify-between items-center print:hidden">
           <div className="flex items-center">
@@ -118,9 +139,12 @@ const Layout: React.FC<LayoutProps> = ({
           <div className="flex items-center gap-4 lg:gap-8">
             <div className="hidden xl:flex flex-col text-right">
               <span className="text-[11px] font-black text-slate-800 uppercase tracking-widest">{evaluatorName || 'SISTEMA'}</span>
-              <span className={`text-[9px] font-black uppercase tracking-[0.2em] mt-1 ${isJaquelin ? 'text-[#003366]' : 'text-emerald-500'}`}>
-                ● CONEXIÓN SEGURA
-              </span>
+              <div className="flex items-center justify-end gap-1.5 mt-1">
+                 <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
+                 <span className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-500">
+                   DB PERSISTENTE
+                 </span>
+              </div>
             </div>
             
             <button 
@@ -133,7 +157,6 @@ const Layout: React.FC<LayoutProps> = ({
           </div>
         </header>
 
-        {/* Scrollable Content Area */}
         <main className="flex-1 overflow-y-auto p-6 lg:p-10 bg-slate-50 print:bg-white print:p-0">
           <div className="max-w-7xl mx-auto">
             {children}
