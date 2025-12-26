@@ -8,6 +8,7 @@ interface UserProfile {
   last_name: string | null;
   avatar_url: string | null;
   is_bonus_approver: boolean;
+  role: string; // Added role
 }
 
 interface SessionContextType {
@@ -35,7 +36,7 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       if (session?.user) {
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
-          .select('id, first_name, last_name, avatar_url, is_bonus_approver')
+          .select('id, first_name, last_name, avatar_url, is_bonus_approver, role') // Fetch role
           .eq('id', session.user.id)
           .single();
 
@@ -61,7 +62,7 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
         if (currentSession?.user) {
           const { data: profileData, error: profileError } = await supabase
             .from('profiles')
-            .select('id, first_name, last_name, avatar_url, is_bonus_approver')
+            .select('id, first_name, last_name, avatar_url, is_bonus_approver, role') // Fetch role
             .eq('id', currentSession.user.id)
             .single();
 

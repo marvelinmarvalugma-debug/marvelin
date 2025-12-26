@@ -8,7 +8,8 @@ interface LayoutProps {
   onDownloadReports?: () => void;
   evaluatorName?: string | null;
   onChangeEvaluator?: () => void;
-  isBonusApprover: boolean; // New prop
+  isBonusApprover: boolean;
+  userRole: string; // New prop for user's role
 }
 
 const Layout: React.FC<LayoutProps> = ({ 
@@ -18,7 +19,8 @@ const Layout: React.FC<LayoutProps> = ({
   onDownloadReports,
   evaluatorName,
   onChangeEvaluator,
-  isBonusApprover
+  isBonusApprover,
+  userRole // Destructure userRole
 }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
@@ -82,7 +84,7 @@ const Layout: React.FC<LayoutProps> = ({
                   {evaluatorName.split(' ')[0][0]}
                 </div>
                 <div className="ml-4 overflow-hidden">
-                  <p className="text-[9px] text-slate-400 font-black uppercase tracking-[0.2em]">{isBonusApprover ? 'Director' : 'Evaluador'}</p>
+                  <p className="text-[9px] text-slate-400 font-black uppercase tracking-[0.2em]">{userRole.toUpperCase()}</p> {/* Display userRole */}
                   <p className="text-[11px] font-black truncate text-white uppercase mt-0.5">{evaluatorName}</p>
                 </div>
               </div>

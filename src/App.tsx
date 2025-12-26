@@ -364,6 +364,7 @@ const AppContent: React.FC = () => {
       evaluatorName={currentEvaluatorName} 
       onChangeEvaluator={handleLogout}
       isBonusApprover={isBonusApprover}
+      userRole={userProfile?.role || 'evaluator'} // Pass userRole
     >
       {renderContent()}
       {showReportsModal && <MonthlyReportModal evaluations={filteredEvaluationsForReport} employees={filteredEmployees} onClose={() => setShowReportsModal(false)} />}
