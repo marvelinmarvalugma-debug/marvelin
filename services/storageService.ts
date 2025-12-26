@@ -8,6 +8,9 @@ const DB_KEYS = {
   MASTER_PWD: 'vulcan_db_master_pwd_v1',
 };
 
+// Canal de comunicación para sincronización en tiempo real entre pestañas
+const syncChannel = new BroadcastChannel('vulcan_sync_channel');
+
 export const VulcanDB = {
   initialize: () => {
     const existing = localStorage.getItem(DB_KEYS.EMPLOYEES);
@@ -24,8 +27,11 @@ export const VulcanDB = {
     return data ? JSON.parse(data) : INITIAL_EMPLOYEES;
   },
 
-  saveEmployees: (employees: Employee[]) => {
+  saveEmployees: (employees: Employee[], broadcast = true) => {
     localStorage.setItem(DB_KEYS.EMPLOYEES, JSON.stringify(employees));
+    if (broadcast) {
+      syncChannel.postMessage({ type: 'SYNC_EMPLOYEES', data: employees });
+    }
   },
 
   getEvaluations: (): FullEvaluation[] => {
@@ -33,8 +39,18 @@ export const VulcanDB = {
     return data ? JSON.parse(data) : [];
   },
 
-  saveEvaluations: (evaluations: FullEvaluation[]) => {
+  saveEvaluations: (evaluations: FullEvaluation[], broadcast = true) => {
     localStorage.setItem(DB_KEYS.EVALUATIONS, JSON.stringify(evaluations));
+    if (broadcast) {
+      syncChannel.postMessage({ type: 'SYNC_EVALUATIONS', data: evaluations });
+    }
+  },
+
+  // Suscribirse a cambios desde otras pestañas
+  onSync: (callback: (payload: { type: string, data: any }) => void) => {
+    syncChannel.onmessage = (event) => {
+      callback(event.data);
+    };
   },
 
   exportBackup: () => {

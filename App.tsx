@@ -27,30 +27,47 @@ const App: React.FC = () => {
   const [isAddingEmployee, setIsAddingEmployee] = useState(false);
   const [showReportsModal, setShowReportsModal] = useState(false);
   const [showSync, setShowSync] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
 
-  // Carga inicial
+  // Inicialización y Sincronización Automática
   useEffect(() => {
     VulcanDB.initialize();
     setEmployees(VulcanDB.getEmployees());
     setEvaluationsHistory(VulcanDB.getEvaluations());
     setIsInitialized(true);
     
-    // Verificar si existe clave maestra
+    // Escuchar cambios de otras pestañas
+    VulcanDB.onSync((payload) => {
+      setIsSyncing(true);
+      if (payload.type === 'SYNC_EMPLOYEES') {
+        setEmployees(payload.data);
+      } else if (payload.type === 'SYNC_EVALUATIONS') {
+        setEvaluationsHistory(payload.data);
+      }
+      setTimeout(() => setIsSyncing(false), 800);
+    });
+
     if (!VulcanDB.getMasterPassword()) {
       setIsSettingPassword(true);
     }
   }, []);
 
-  // Persistencia automática
+  // Persistencia automática con trigger de sincronización
   useEffect(() => {
     if (isInitialized) {
+      setIsSyncing(true);
       VulcanDB.saveEmployees(employees);
+      const timer = setTimeout(() => setIsSyncing(false), 500);
+      return () => clearTimeout(timer);
     }
   }, [employees, isInitialized]);
 
   useEffect(() => {
     if (isInitialized) {
+      setIsSyncing(true);
       VulcanDB.saveEvaluations(evaluationsHistory);
+      const timer = setTimeout(() => setIsSyncing(false), 500);
+      return () => clearTimeout(timer);
     }
   }, [evaluationsHistory, isInitialized]);
 
@@ -88,7 +105,6 @@ const App: React.FC = () => {
   }, [evaluationsHistory, currentEvaluator, isJaquelin]);
 
   const handleSaveEvaluation = (evaluation: FullEvaluation) => {
-    // Lógica para ALMACENAR ÚNICAMENTE por trabajador, mes y año
     setEvaluationsHistory(prev => {
       const filtered = prev.filter(ev => 
         !(ev.employeeId === evaluation.employeeId && 
@@ -110,12 +126,10 @@ const App: React.FC = () => {
   };
 
   const handleBulkAdd = (data: string) => {
-    // Procesador flexible para Carga Masiva (detecta tabs, comas o punto y coma)
     const lines = data.split(/\r?\n/).filter(line => line.trim() !== '');
     const newEmps: Employee[] = [];
     
     lines.forEach(line => {
-      // Intenta separar por tabulador, si no, por punto y coma, si no, por coma
       let parts = line.split('\t');
       if (parts.length < 2) parts = line.split(';');
       if (parts.length < 2) parts = line.split(',');
@@ -144,9 +158,6 @@ const App: React.FC = () => {
 
     if (newEmps.length > 0) {
       setEmployees(prev => [...newEmps, ...prev]);
-      alert(`¡Éxito! Se procesaron ${newEmps.length} trabajadores.`);
-    } else {
-      alert("No se detectaron datos válidos. Asegúrese de copiar columnas de Cédula y Nombre.");
     }
   };
 
@@ -315,7 +326,6 @@ const App: React.FC = () => {
           );
         }
         
-        // Vista para evaluadores regulares
         const groups: Record<string, Employee[]> = {};
         filteredEmployees.forEach(emp => {
           if (!groups[emp.department]) groups[emp.department] = [];
@@ -362,6 +372,7 @@ const App: React.FC = () => {
       onOpenSync={() => { setShowSync(true); setSelectedEmployee(null); setEvaluatingEmployee(null); setIsAddingEmployee(false); }}
       evaluatorName={currentEvaluator} 
       onChangeEvaluator={() => { setCurrentEvaluator(null); setIsAuthenticated(false); setPasswordInput(''); }}
+      isSyncing={isSyncing}
     >
       {renderContent()}
       {showReportsModal && <MonthlyReportModal evaluations={filteredEvaluationsForReport} employees={filteredEmployees} onClose={() => setShowReportsModal(false)} />}

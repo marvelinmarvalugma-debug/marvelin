@@ -11,6 +11,7 @@ interface LayoutProps {
   onOpenSync?: () => void;
   evaluatorName?: string | null;
   onChangeEvaluator?: () => void;
+  isSyncing?: boolean;
 }
 
 const Layout: React.FC<LayoutProps> = ({ 
@@ -20,7 +21,8 @@ const Layout: React.FC<LayoutProps> = ({
   onDownloadReports,
   onOpenSync,
   evaluatorName,
-  onChangeEvaluator
+  onChangeEvaluator,
+  isSyncing = false
 }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const isJaquelin = evaluatorName === BONUS_APPROVER;
@@ -140,9 +142,9 @@ const Layout: React.FC<LayoutProps> = ({
             <div className="hidden xl:flex flex-col text-right">
               <span className="text-[11px] font-black text-slate-800 uppercase tracking-widest">{evaluatorName || 'SISTEMA'}</span>
               <div className="flex items-center justify-end gap-1.5 mt-1">
-                 <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
-                 <span className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-500">
-                   DB PERSISTENTE
+                 <div className={`w-1.5 h-1.5 rounded-full ${isSyncing ? 'bg-amber-500 animate-ping' : 'bg-emerald-500'}`}></div>
+                 <span className={`text-[9px] font-black uppercase tracking-[0.2em] ${isSyncing ? 'text-amber-500' : 'text-emerald-500'}`}>
+                   {isSyncing ? 'SINCRO EN CURSO...' : 'SYNC: OK'}
                  </span>
               </div>
             </div>
