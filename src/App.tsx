@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
@@ -10,11 +10,11 @@ import MonthlyReportModal from './components/MonthlyReportModal';
 import Login from './pages/Login';
 import { SessionContextProvider, useSession } from './components/SessionContextProvider';
 import { INITIAL_EMPLOYEES } from './constants';
-import { Employee, FullEvaluation, Department, AUTHORIZED_EVALUATORS, BONUS_APPROVER, BonusStatus, VulcanNotification, KPI } from './types';
+import { Employee, FullEvaluation, Department, AUTHORIZED_EVALUATORS, BONUS_APPROVER, BonusStatus, VulcanNotification, KPI, TechnicalCriterion } from './types';
 import { supabase } from './integrations/supabase/client';
 
 const AppContent: React.FC = () => {
-  const { session, user, loading } = useSession();
+  const { session, user, userProfile, loading } = useSession();
   const navigate = useNavigate();
 
   const [currentEvaluatorName, setCurrentEvaluatorName] = useState<string | null>(null);
@@ -27,41 +27,64 @@ const AppContent: React.FC = () => {
   const [isAddingEmployee, setIsAddingEmployee] = useState(false);
   const [showReportsModal, setShowReportsModal] = useState(false);
 
+  // Effect to handle authentication and set evaluator details
   useEffect(() => {
     if (!loading) {
       if (!session) {
         navigate('/login');
       } else {
-        // Fetch user profile to get their name and role
-        const fetchProfile = async () => {
-          const { data, error } = await supabase
-            .from('profiles')
-            .select('first_name, last_name')
-            .eq('id', user?.id)
-            .single();
-
-          if (error) {
-            console.error('Error fetching profile:', error);
-            // Fallback to email if profile not found or error
-            const emailName = user?.email?.split('@')[0] || 'Usuario';
-            setCurrentEvaluatorName(emailName.toUpperCase());
-            setIsBonusApprover(AUTHORIZED_EVALUATORS.includes(emailName.toUpperCase()) && emailName.toUpperCase() === BONUS_APPROVER);
-          } else if (data) {
-            const fullName = `${data.first_name || ''} ${data.last_name || ''}`.trim();
-            setCurrentEvaluatorName(fullName.toUpperCase());
-            setIsBonusApprover(fullName.toUpperCase() === BONUS_APPROVER);
-          } else {
-            // If no profile data, use email as a fallback
-            const emailName = user?.email?.split('@')[0] || 'Usuario';
-            setCurrentEvaluatorName(emailName.toUpperCase());
-            setIsBonusApprover(AUTHORIZED_EVALUATORS.includes(emailName.toUpperCase()) && emailName.toUpperCase() === BONUS_APPROVER);
-          }
-        };
-        fetchProfile();
+        if (userProfile) {
+          const fullName = `${userProfile.first_name || ''} ${userProfile.last_name || ''}`.trim();
+          setCurrentEvaluatorName(fullName.toUpperCase());
+          setIsBonusApprover(userProfile.is_bonus_approver);
+        } else {
+          // Fallback if profile not found
+          const emailName = user?.email?.split('@')[0] || 'Usuario';
+          setCurrentEvaluatorName(emailName.toUpperCase());
+          setIsBonusApprover(emailName.toUpperCase() === BONUS_APPROVER);
+        }
         navigate('/'); // Redirect to home if logged in
       }
     }
-  }, [session, loading, user, navigate]);
+  }, [session, loading, user, userProfile, navigate]);
+
+  // Fetch evaluations from Supabase
+  useEffect(() => {
+    const fetchEvaluations = async () => {
+      if (session?.user) {
+        const { data, error } = await supabase
+          .from('evaluations')
+          .select('*'); // RLS will filter based on user_id or is_bonus_approver
+
+        if (error) {
+          console.error('Error fetching evaluations:', error);
+        } else {
+          const fetchedEvals: FullEvaluation[] = data.map((dbEval: any) => ({
+            employeeId: dbEval.employee_id,
+            campo: dbEval.campo,
+            mes: dbEval.mes,
+            año: dbEval.año,
+            evaluador: dbEval.evaluador_name,
+            cargoEvaluador: dbEval.cargo_evaluador,
+            areaDesempeño: dbEval.area_desempeño,
+            criteria: dbEval.criteria as TechnicalCriterion[],
+            observaciones: dbEval.observaciones,
+            condicionBono: dbEval.condicion_bono as BonusStatus,
+            recomendacionSalarial: dbEval.recomendacion_salarial,
+            totalPuntos: dbEval.total_puntos,
+            promedioFinal: dbEval.promedio_final,
+            date: dbEval.evaluation_date,
+            authorizedBy: dbEval.authorized_by,
+          }));
+          setEvaluationsHistory(fetchedEvals);
+        }
+      }
+    };
+
+    if (session?.user && currentEvaluatorName) { // Only fetch if user is logged in and evaluator name is set
+      fetchEvaluations();
+    }
+  }, [session?.user, currentEvaluatorName]); // Re-fetch when session or evaluator name changes
 
   const filteredEmployees = useMemo(() => {
     if (!currentEvaluatorName) return [];
@@ -74,43 +97,141 @@ const AppContent: React.FC = () => {
     return evaluationsHistory.filter((ev: FullEvaluation) => ev.evaluador === currentEvaluatorName);
   }, [evaluationsHistory, currentEvaluatorName, isBonusApprover]);
 
-  const handleSaveEvaluation = (evaluation: FullEvaluation) => {
-    setEvaluationsHistory(prev => [...prev, evaluation]);
-    setEmployees(prev => prev.map(emp => 
-      emp.id === evaluation.employeeId 
-        ? { 
-            ...emp, 
-            lastEvaluation: `${evaluation.mes} ${evaluation.año}`,
-            kpis: emp.kpis.map(k => ({ ...k, score: Math.round(evaluation.promedioFinal * 20) }))
-          } 
-        : emp
-    ));
-  };
+  const handleSaveEvaluation = useCallback(async (evaluation: FullEvaluation) => {
+    if (!user?.id) {
+      console.error("User not logged in, cannot save evaluation.");
+      return;
+    }
 
-  const handleApproveBonus = (employeeId: string) => {
-    const today = new Date().toLocaleDateString('es-ES');
-    setEvaluationsHistory(prev => prev.map(ev => {
-      if (ev.employeeId === employeeId && ev.condicionBono === BonusStatus.PendingAuth) {
-        return { ...ev, condicionBono: BonusStatus.Approved, authorizedBy: BONUS_APPROVER };
-      }
-      return ev;
-    }));
-    setEmployees(prev => prev.map(emp => {
-      if (emp.id === employeeId) {
-        const newNotification: VulcanNotification = {
-          id: Math.random().toString(36).substr(2, 9),
-          employeeId: emp.id,
-          title: "¡BONO AUTORIZADO!",
-          message: `La Dirección General (${BONUS_APPROVER}) ha autorizado su bono correspondiente.`,
-          date: today,
-          type: 'bonus',
-          read: false
-        };
-        return { ...emp, notifications: [newNotification, ...(emp.notifications || [])] };
-      }
-      return emp;
-    }));
-  };
+    const { data, error } = await supabase
+      .from('evaluations')
+      .insert({
+        employee_id: evaluation.employeeId,
+        evaluator_id: user.id,
+        campo: evaluation.campo,
+        mes: evaluation.mes,
+        año: evaluation.año,
+        evaluador_name: evaluation.evaluador,
+        cargo_evaluador: evaluation.cargoEvaluador,
+        area_desempeño: evaluation.areaDesempeño,
+        criteria: evaluation.criteria,
+        observaciones: evaluation.observaciones,
+        condicion_bono: evaluation.condicionBono,
+        recomendacion_salarial: evaluation.recomendacionSalarial,
+        total_puntos: evaluation.totalPuntos,
+        promedio_final: evaluation.promedioFinal,
+        evaluation_date: evaluation.date,
+        authorized_by: evaluation.authorizedBy,
+      })
+      .select();
+
+    if (error) {
+      console.error('Error saving evaluation to Supabase:', error);
+    } else if (data && data.length > 0) {
+      const newDbEval = data[0];
+      const newFullEval: FullEvaluation = {
+        employeeId: newDbEval.employee_id,
+        campo: newDbEval.campo,
+        mes: newDbEval.mes,
+        año: newDbEval.año,
+        evaluador: newDbEval.evaluador_name,
+        cargoEvaluador: newDbEval.cargo_evaluador,
+        areaDesempeño: newDbEval.area_desempeño,
+        criteria: newDbEval.criteria as TechnicalCriterion[],
+        observaciones: newDbEval.observaciones,
+        condicionBono: newDbEval.condicion_bono as BonusStatus,
+        recomendacionSalarial: newDbEval.recomendacion_salarial,
+        totalPuntos: newDbEval.total_puntos,
+        promedioFinal: newDbEval.promedio_final,
+        date: newDbEval.evaluation_date,
+        authorizedBy: newDbEval.authorized_by,
+      };
+      setEvaluationsHistory(prev => [...prev, newFullEval]);
+      setEmployees(prev => prev.map(emp => 
+        emp.id === evaluation.employeeId 
+          ? { 
+              ...emp, 
+              lastEvaluation: `${evaluation.mes} ${evaluation.año}`,
+              kpis: emp.kpis.map(k => ({ ...k, score: Math.round(evaluation.promedioFinal * 20) }))
+            } 
+          : emp
+      ));
+    }
+  }, [user?.id]);
+
+  const handleApproveBonus = useCallback(async (employeeId: string) => {
+    if (!user?.id || !isBonusApprover) {
+      console.error("Unauthorized to approve bonus.");
+      return;
+    }
+
+    const today = new Date().toISOString().split('T')[0]; // Use ISO string for date
+    
+    // Find the evaluation to update
+    const evaluationToUpdate = evaluationsHistory.find(ev => 
+      ev.employeeId === employeeId && ev.condicionBono === BonusStatus.PendingAuth
+    );
+
+    if (!evaluationToUpdate) {
+      console.warn("No pending bonus evaluation found for this employee.");
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('evaluations')
+      .update({ 
+        condicion_bono: BonusStatus.Approved, 
+        authorized_by: BONUS_APPROVER 
+      })
+      .eq('employee_id', employeeId)
+      .eq('condicion_bono', BonusStatus.PendingAuth)
+      .select();
+
+    if (error) {
+      console.error('Error approving bonus in Supabase:', error);
+    } else if (data && data.length > 0) {
+      const updatedDbEval = data[0];
+      const updatedFullEval: FullEvaluation = {
+        employeeId: updatedDbEval.employee_id,
+        campo: updatedDbEval.campo,
+        mes: updatedDbEval.mes,
+        año: updatedDbEval.año,
+        evaluador: updatedDbEval.evaluador_name,
+        cargoEvaluador: updatedDbEval.cargo_evaluador,
+        areaDesempeño: updatedDbEval.area_desempeño,
+        criteria: updatedDbEval.criteria as TechnicalCriterion[],
+        observaciones: updatedDbEval.observaciones,
+        condicionBono: updatedDbEval.condicion_bono as BonusStatus,
+        recomendacionSalarial: updatedDbEval.recomendacion_salarial,
+        totalPuntos: updatedDbEval.total_puntos,
+        promedioFinal: updatedDbEval.promedio_final,
+        date: updatedDbEval.evaluation_date,
+        authorizedBy: updatedDbEval.authorized_by,
+      };
+
+      setEvaluationsHistory(prev => prev.map(ev => 
+        ev.employeeId === employeeId && ev.condicionBono === BonusStatus.PendingAuth
+          ? updatedFullEval
+          : ev
+      ));
+
+      setEmployees(prev => prev.map(emp => {
+        if (emp.id === employeeId) {
+          const newNotification: VulcanNotification = {
+            id: Math.random().toString(36).substr(2, 9),
+            employeeId: emp.id,
+            title: "¡BONO AUTORIZADO!",
+            message: `La Dirección General (${BONUS_APPROVER}) ha autorizado su bono correspondiente.`,
+            date: new Date().toLocaleDateString('es-ES'),
+            type: 'bonus',
+            read: false
+          };
+          return { ...emp, notifications: [newNotification, ...(emp.notifications || [])] };
+        }
+        return emp;
+      }));
+    }
+  }, [user?.id, isBonusApprover, evaluationsHistory]);
 
   const employeesByDept = useMemo(() => {
     const groups: Record<string, Employee[]> = {};
