@@ -15,6 +15,7 @@ const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "
 
 export default function EvaluationForm({ employee, evaluatorName, onClose, onSave }: EvaluationFormProps) {
   const currentYear = new Date().getFullYear();
+  const lastYear = currentYear - 1;
   const currentMonthName = new Date().toLocaleString('es-ES', { month: 'long' }).toLowerCase();
 
   const [step, setStep] = useState(1);
@@ -85,6 +86,7 @@ export default function EvaluationForm({ employee, evaluatorName, onClose, onSav
                   <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Año</label>
                   <select value={anio} onChange={e => setAnio(e.target.value)} className="w-full p-4 border-2 border-slate-50 rounded-2xl bg-slate-50 font-black uppercase text-[#003366] outline-none focus:border-[#003366] cursor-pointer text-sm">
                     <option value={currentYear}>{currentYear}</option>
+                    <option value={lastYear}>{lastYear}</option>
                   </select>
                 </div>
               </div>
