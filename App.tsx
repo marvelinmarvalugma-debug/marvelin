@@ -6,21 +6,18 @@ import EmployeeDetails from './components/EmployeeDetails';
 import EvaluationForm from './components/EvaluationForm';
 import AddEmployeeForm from './components/AddEmployeeForm';
 import MonthlyReportModal from './components/MonthlyReportModal';
-import LoginPage from './src/pages/LoginPage'; // Ruta corregida
-import { SessionContextProvider, useSession } from './src/components/SessionContextProvider'; // Ruta corregida
+import LoginPage from './src/pages/LoginPage';
+import { SessionContextProvider, useSession } from './src/components/SessionContextProvider';
 import { VulcanDB } from './services/storageService';
 import { Employee, FullEvaluation, Department, AUTHORIZED_EVALUATORS, BONUS_APPROVER, BonusStatus, VulcanNotification, KPI } from './types';
-import { supabase } from './src/integrations/supabase/client'; // Ruta corregida
+import { supabase } from './src/integrations/supabase/client';
 
 const AppContent: React.FC = () => {
-  const { session, user } = useSession(); // Usar el hook de sesión
+  const { session, user } = useSession();
   
   const [isInitialized, setIsInitialized] = useState(false);
   const [currentEvaluator, setCurrentEvaluator] = useState<string | null>(null);
-  // const [isAuthenticated, setIsAuthenticated] = useState(false); // Ya no es necesario con Supabase
-  // const [passwordInput, setPasswordInput] = useState(''); // Ya no es necesario con Supabase
-  // const [isSettingPassword, setIsSettingPassword] = useState(false); // Ya no es necesario con Supabase
-  // const [loginError, setLoginError] = useState(false); // Ya no es necesario con Supabase
+  const [currentEvaluatorRole, setCurrentEvaluatorRole] = useState<string | null>(null); // Nuevo estado para el rol
   
   const [activeTab, setActiveTab] = useState('dashboard');
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -48,11 +45,6 @@ const AppContent: React.FC = () => {
       }
       setTimeout(() => setIsSyncing(false), 800);
     });
-
-    // La lógica de passwordInput y isSettingPassword se reemplaza por Supabase Auth
-    // if (!VulcanDB.getMasterPassword()) {
-    //   setIsSettingPassword(true);
-    // }
   }, []);
 
   // Persistencia automática con trigger de sincronización
@@ -86,38 +78,20 @@ const AppContent: React.FC = () => {
 
         if (error) {
           console.error('Error fetching profile:', error);
-          // Fallback si no se encuentra el perfil, usar el email o un nombre genérico
           setCurrentEvaluator(user.email || 'Usuario Desconocido');
+          setCurrentEvaluatorRole('evaluator'); // Rol por defecto si no se encuentra el perfil
         } else if (data) {
           setCurrentEvaluator(`${data.first_name} ${data.last_name}`);
+          setCurrentEvaluatorRole(data.role);
         }
       } else {
         setCurrentEvaluator(null);
+        setCurrentEvaluatorRole(null);
       }
     };
 
     fetchUserProfile();
   }, [user]);
-
-  // const handleAuth = (e: React.FormEvent) => { // Ya no es necesario con Supabase
-  //   e.preventDefault();
-  //   if (isSettingPassword) {
-  //     if (passwordInput.length < 4) {
-  //       alert("La clave debe tener al menos 4 caracteres.");
-  //       return;
-  //     }
-  //     VulcanDB.setMasterPassword(passwordInput);
-  //     setIsSettingPassword(false);
-  //     setIsAuthenticated(true);
-  //   } else {
-  //     if (passwordInput === VulcanDB.getMasterPassword()) {
-  //       setIsAuthenticated(true);
-  //       setLoginError(false);
-  //     } else {
-  //       setLoginError(true);
-  //     }
-  //   }
-  // };
 
   const isJaquelin = currentEvaluator === BONUS_APPROVER;
 
@@ -170,7 +144,7 @@ const AppContent: React.FC = () => {
           role: parts[2] ? parts[2].trim() : 'OPERARIO',
           department: Department.Operations,
           photo: `https://picsum.photos/seed/${Math.random()}/200/200`,
-          managerName: currentEvaluator || AUTHORIZED_EVALUATORS[0], // Usar currentEvaluator de Supabase
+          managerName: currentEvaluator || AUTHORIZED_EVALUATORS[0],
           managerRole: 'Supervisor de Área',
           lastEvaluation: 'Pendiente',
           summary: '',
@@ -224,7 +198,7 @@ const AppContent: React.FC = () => {
     );
   };
 
-  if (!session) { // Si no hay sesión, mostrar la página de login
+  if (!session) {
     return <LoginPage />;
   }
 
@@ -325,7 +299,6 @@ const AppContent: React.FC = () => {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    // No need to reload, onAuthStateChange will handle state update
   };
 
   return (
@@ -334,7 +307,8 @@ const AppContent: React.FC = () => {
       setActiveTab={(tab) => { setActiveTab(tab); }} 
       onDownloadReports={() => setShowReportsModal(true)} 
       evaluatorName={currentEvaluator} 
-      onChangeEvaluator={handleSignOut} // Usar la función de logout de Supabase
+      evaluatorRole={currentEvaluatorRole} // Pasar el rol al Layout
+      onChangeEvaluator={handleSignOut}
       isSyncing={isSyncing}
     >
       {renderContent()}
