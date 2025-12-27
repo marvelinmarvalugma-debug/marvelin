@@ -7,17 +7,20 @@ import EvaluationForm from './components/EvaluationForm';
 import AddEmployeeForm from './components/AddEmployeeForm';
 import MonthlyReportModal from './components/MonthlyReportModal';
 import LoginPage from './src/pages/LoginPage';
+import ProfileCompletionForm from './src/components/ProfileCompletionForm'; // Nueva importación
 import { SessionContextProvider, useSession } from './src/components/SessionContextProvider';
 import { VulcanDB } from './services/storageService';
 import { Employee, FullEvaluation, Department, AUTHORIZED_EVALUATORS, BONUS_APPROVER, BonusStatus, VulcanNotification, KPI } from './types';
 import { supabase } from './src/integrations/supabase/client';
+import toast, { Toaster } from 'react-hot-toast'; // Nueva importación para toasts
 
 const AppContent: React.FC = () => {
   const { session, user } = useSession();
   
   const [isInitialized, setIsInitialized] = useState(false);
   const [currentEvaluator, setCurrentEvaluator] = useState<string | null>(null);
-  const [currentEvaluatorRole, setCurrentEvaluatorRole] = useState<string | null>(null); // Nuevo estado para el rol
+  const [currentEvaluatorRole, setCurrentEvaluatorRole] = useState<string | null>(null);
+  const [needsProfileCompletion, setNeedsProfileCompletion] = useState(false); // Nuevo estado
   
   const [activeTab, setActiveTab] = useState('dashboard');
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -66,7 +69,7 @@ const AppContent: React.FC = () => {
     }
   }, [evaluationsHistory, isInitialized]);
 
-  // Lógica para obtener el perfil del usuario de Supabase
+  // Lógica para obtener el perfil del usuario de Supabase y verificar si necesita completarse
   useEffect(() => {
     const fetchUserProfile = async () => {
       if (user) {
@@ -79,14 +82,23 @@ const AppContent: React.FC = () => {
         if (error) {
           console.error('Error fetching profile:', error);
           setCurrentEvaluator(user.email || 'Usuario Desconocido');
-          setCurrentEvaluatorRole('evaluator'); // Rol por defecto si no se encuentra el perfil
+          setCurrentEvaluatorRole('evaluator');
+          // Si hay un error o el perfil no existe, asumimos que necesita completarse
+          setNeedsProfileCompletion(true); 
         } else if (data) {
           setCurrentEvaluator(`${data.first_name} ${data.last_name}`);
           setCurrentEvaluatorRole(data.role);
+          // Si el nombre o apellido están vacíos, el perfil necesita completarse
+          if (!data.first_name || !data.last_name) {
+            setNeedsProfileCompletion(true);
+          } else {
+            setNeedsProfileCompletion(false);
+          }
         }
       } else {
         setCurrentEvaluator(null);
         setCurrentEvaluatorRole(null);
+        setNeedsProfileCompletion(false); // No hay usuario, no se necesita completar perfil
       }
     };
 
@@ -202,6 +214,16 @@ const AppContent: React.FC = () => {
     return <LoginPage />;
   }
 
+  // Si el usuario está logueado pero necesita completar su perfil
+  if (needsProfileCompletion && user) {
+    return <ProfileCompletionForm userId={user.id} onProfileComplete={() => {
+      setNeedsProfileCompletion(false);
+      // Forzar una re-carga del perfil para actualizar el nombre y rol en la UI
+      // Esto se puede hacer llamando a fetchUserProfile() directamente o forzando un re-render
+      // Para simplificar, el useEffect de user se encargará de re-fetch al cambiar el estado.
+    }} />;
+  }
+
   const renderContent = () => {
     if (isAddingEmployee) return <div className="py-8"><AddEmployeeForm onAdd={(data) => {
       const baseKpis: KPI[] = employees.length > 0 ? employees[0].kpis : [
@@ -228,7 +250,7 @@ const AppContent: React.FC = () => {
       case 'dashboard': return <Dashboard employees={filteredEmployees} />;
       case 'employees': return <EmployeeList employees={filteredEmployees} onSelect={setSelectedEmployee} onAddNew={() => setIsAddingEmployee(true)} onBulkAdd={handleBulkAdd} />;
       case 'evaluations':
-        if (isJaquelin) {
+        if (currentEvaluatorRole === 'director') { // Usar el rol para la lógica de aprobación de bonos
           const pending = evaluationsHistory.filter((ev: FullEvaluation) => ev.condicionBono === BonusStatus.PendingAuth);
           return (
             <div className="space-y-10">
@@ -307,7 +329,7 @@ const AppContent: React.FC = () => {
       setActiveTab={(tab) => { setActiveTab(tab); }} 
       onDownloadReports={() => setShowReportsModal(true)} 
       evaluatorName={currentEvaluator} 
-      evaluatorRole={currentEvaluatorRole} // Pasar el rol al Layout
+      evaluatorRole={currentEvaluatorRole}
       onChangeEvaluator={handleSignOut}
       isSyncing={isSyncing}
     >
@@ -319,6 +341,7 @@ const AppContent: React.FC = () => {
 
 const App: React.FC = () => (
   <SessionContextProvider>
+    <Toaster /> {/* Añadir Toaster aquí para mostrar notificaciones */}
     <AppContent />
   </SessionContextProvider>
 );
