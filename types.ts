@@ -9,6 +9,17 @@ export enum Department {
   Administrative = 'Administrativa'
 }
 
+export enum UserRole {
+  Supervisor = 'Supervisor',
+  Director = 'Director'
+}
+
+export interface User {
+  username: string;
+  password?: string;
+  role: UserRole;
+}
+
 export interface KPI {
   id: string;
   name: string;
@@ -66,14 +77,13 @@ export interface FullEvaluation {
   criteria: TechnicalCriterion[];
   observaciones: string;
   condicionBono: BonusStatus;
-  recomendacionSalarial: string; // Nuevo campo para persistencia
+  recomendacionSalarial: string; 
   totalPuntos: number;
   promedioFinal: number;
   date: string;
   authorizedBy?: string;
 }
 
-// Lista oficial actualizada de evaluadores autorizados
 export const AUTHORIZED_EVALUATORS = [
   "NELSON MARCANO",
   "DANIEL FARRERA",
@@ -84,5 +94,4 @@ export const AUTHORIZED_EVALUATORS = [
   "JAQUELIN NAIM"
 ];
 
-// Único autorizador de bonos actualizado
 export const BONUS_APPROVER = "JAQUELIN NAIM";

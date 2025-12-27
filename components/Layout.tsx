@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import { BONUS_APPROVER } from '../types';
+import { UserRole } from '../types';
 import { VulcanDB } from '../services/storageService';
 
 interface LayoutProps {
@@ -10,7 +11,6 @@ interface LayoutProps {
   evaluatorName?: string | null;
   onChangeEvaluator?: () => void;
   isSyncing?: boolean;
-  evaluatorRole?: string | null; // Nuevo prop para el rol
 }
 
 const Layout: React.FC<LayoutProps> = ({ 
@@ -20,16 +20,18 @@ const Layout: React.FC<LayoutProps> = ({
   onDownloadReports,
   evaluatorName,
   onChangeEvaluator,
-  isSyncing = false,
-  evaluatorRole // Usar el nuevo prop
+  isSyncing = false
 }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const isJaquelin = evaluatorName === BONUS_APPROVER; // Esta lógica podría depender del rol en lugar del nombre
+  
+  // Obtener datos del usuario actual para el layout
+  const user = evaluatorName ? VulcanDB.getUser(evaluatorName) : null;
+  const isDirector = user?.role === UserRole.Director;
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: '📊' },
     { id: 'employees', label: 'Personal', icon: '👥' },
-    { id: 'evaluations', label: (evaluatorRole === 'director') ? 'Aprobación Bonos' : 'Matriz Desempeño', icon: (evaluatorRole === 'director') ? '✅' : '📝' },
+    { id: 'evaluations', label: isDirector ? 'Aprobación Bonos' : 'Matriz Desempeño', icon: isDirector ? '✅' : '📝' },
   ];
 
   const handleTabChange = (id: string) => {
@@ -89,13 +91,13 @@ const Layout: React.FC<LayoutProps> = ({
 
         {evaluatorName && (
           <div className="p-8 border-t border-white/5 bg-[#001326]">
-            <div className={`p-5 rounded-3xl border-2 ${evaluatorRole === 'director' ? 'bg-indigo-900/30 border-[#FFCC00]/50' : 'bg-white/5 border-white/10'}`}>
+            <div className={`p-5 rounded-3xl border-2 ${isDirector ? 'bg-indigo-900/30 border-[#FFCC00]/50' : 'bg-white/5 border-white/10'}`}>
               <div className="flex items-center">
-                <div className={`shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center text-sm font-black ${evaluatorRole === 'director' ? 'bg-[#FFCC00] text-[#003366]' : 'bg-[#003366] text-white shadow-lg'}`}>
+                <div className={`shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center text-sm font-black ${isDirector ? 'bg-[#FFCC00] text-[#003366]' : 'bg-[#003366] text-white shadow-lg'}`}>
                   {evaluatorName.split(' ')[0][0]}
                 </div>
                 <div className="ml-4 overflow-hidden">
-                  <p className="text-[9px] text-slate-400 font-black uppercase tracking-[0.2em]">{evaluatorRole ? evaluatorRole.toUpperCase() : 'EVALUADOR'}</p>
+                  <p className="text-[9px] text-slate-400 font-black uppercase tracking-[0.2em]">{user?.role || 'User'}</p>
                   <p className="text-[11px] font-black truncate text-white uppercase mt-0.5">{evaluatorName}</p>
                 </div>
               </div>
@@ -123,7 +125,7 @@ const Layout: React.FC<LayoutProps> = ({
             <div>
               <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] leading-none mb-1.5">{activeTab}</h2>
               <p className="text-base lg:text-xl font-black text-slate-800 leading-tight uppercase tracking-tight">
-                {(evaluatorRole === 'director') ? 'Gestión de Beneficios' : 'Sistema de Evaluación Técnica'}
+                {isDirector ? 'Gestión de Beneficios' : 'Sistema de Evaluación Técnica'}
               </p>
             </div>
           </div>

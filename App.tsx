@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
@@ -6,21 +7,19 @@ import EmployeeDetails from './components/EmployeeDetails';
 import EvaluationForm from './components/EvaluationForm';
 import AddEmployeeForm from './components/AddEmployeeForm';
 import MonthlyReportModal from './components/MonthlyReportModal';
-import LoginPage from './src/pages/LoginPage';
-import ProfileCompletionForm from './src/components/ProfileCompletionForm'; // Nueva importación
-import { SessionContextProvider, useSession } from './src/components/SessionContextProvider';
 import { VulcanDB } from './services/storageService';
-import { Employee, FullEvaluation, Department, AUTHORIZED_EVALUATORS, BONUS_APPROVER, BonusStatus, VulcanNotification, KPI } from './types';
-import { supabase } from './src/integrations/supabase/client';
-import toast, { Toaster } from 'react-hot-toast'; // Nueva importación para toasts
+import { 
+  Employee, FullEvaluation, Department, 
+  AUTHORIZED_EVALUATORS, BONUS_APPROVER, BonusStatus, 
+  VulcanNotification, KPI, User, UserRole 
+} from './types';
 
-const AppContent: React.FC = () => {
-  const { session, user } = useSession();
-  
+const App: React.FC = () => {
   const [isInitialized, setIsInitialized] = useState(false);
-  const [currentEvaluator, setCurrentEvaluator] = useState<string | null>(null);
-  const [currentEvaluatorRole, setCurrentEvaluatorRole] = useState<string | null>(null);
-  const [needsProfileCompletion, setNeedsProfileCompletion] = useState(false); // Nuevo estado
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [loginError, setLoginError] = useState(false);
   
   const [activeTab, setActiveTab] = useState('dashboard');
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -31,32 +30,25 @@ const AppContent: React.FC = () => {
   const [showReportsModal, setShowReportsModal] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
 
-  // Inicialización y Sincronización Automática
   useEffect(() => {
     VulcanDB.initialize();
     setEmployees(VulcanDB.getEmployees());
     setEvaluationsHistory(VulcanDB.getEvaluations());
     setIsInitialized(true);
     
-    // Escuchar cambios de otras pestañas
     VulcanDB.onSync((payload) => {
       setIsSyncing(true);
-      if (payload.type === 'SYNC_EMPLOYEES') {
-        setEmployees(payload.data);
-      } else if (payload.type === 'SYNC_EVALUATIONS') {
-        setEvaluationsHistory(payload.data);
-      }
+      if (payload.type === 'SYNC_EMPLOYEES') setEmployees(payload.data);
+      if (payload.type === 'SYNC_EVALUATIONS') setEvaluationsHistory(payload.data);
       setTimeout(() => setIsSyncing(false), 800);
     });
   }, []);
 
-  // Persistencia automática con trigger de sincronización
   useEffect(() => {
     if (isInitialized) {
       setIsSyncing(true);
       VulcanDB.saveEmployees(employees);
-      const timer = setTimeout(() => setIsSyncing(false), 500);
-      return () => clearTimeout(timer);
+      setTimeout(() => setIsSyncing(false), 500);
     }
   }, [employees, isInitialized]);
 
@@ -64,59 +56,48 @@ const AppContent: React.FC = () => {
     if (isInitialized) {
       setIsSyncing(true);
       VulcanDB.saveEvaluations(evaluationsHistory);
-      const timer = setTimeout(() => setIsSyncing(false), 500);
-      return () => clearTimeout(timer);
+      setTimeout(() => setIsSyncing(false), 500);
     }
   }, [evaluationsHistory, isInitialized]);
 
-  // Lógica para obtener el perfil del usuario de Supabase y verificar si necesita completarse
-  useEffect(() => {
-    const fetchUserProfile = async () => {
-      if (user) {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('first_name, last_name, role')
-          .eq('id', user.id)
-          .single();
+  const handleAuth = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentUser) return;
 
-        if (error) {
-          console.error('Error fetching profile:', error);
-          setCurrentEvaluator(user.email || 'Usuario Desconocido');
-          setCurrentEvaluatorRole('evaluator');
-          // Si hay un error o el perfil no existe, asumimos que necesita completarse
-          setNeedsProfileCompletion(true); 
-        } else if (data) {
-          setCurrentEvaluator(`${data.first_name} ${data.last_name}`);
-          setCurrentEvaluatorRole(data.role);
-          // Si el nombre o apellido están vacíos, el perfil necesita completarse
-          if (!data.first_name || !data.last_name) {
-            setNeedsProfileCompletion(true);
-          } else {
-            setNeedsProfileCompletion(false);
-          }
-        }
-      } else {
-        setCurrentEvaluator(null);
-        setCurrentEvaluatorRole(null);
-        setNeedsProfileCompletion(false); // No hay usuario, no se necesita completar perfil
+    // Si el usuario no tiene clave registrada, la establece ahora
+    if (!currentUser.password) {
+      if (passwordInput.length < 4) {
+        alert("La clave debe tener al menos 4 caracteres.");
+        return;
       }
-    };
+      const updatedUser = { ...currentUser, password: passwordInput };
+      VulcanDB.updateUser(updatedUser);
+      setCurrentUser(updatedUser);
+      setIsAuthenticated(true);
+      setLoginError(false);
+    } else {
+      // Validación normal contra la tabla
+      if (passwordInput === currentUser.password) {
+        setIsAuthenticated(true);
+        setLoginError(false);
+      } else {
+        setLoginError(true);
+      }
+    }
+  };
 
-    fetchUserProfile();
-  }, [user]);
-
-  const isJaquelin = currentEvaluator === BONUS_APPROVER;
+  const isDirector = currentUser?.role === UserRole.Director;
 
   const filteredEmployees = useMemo(() => {
-    if (!currentEvaluator) return [];
-    if (isJaquelin) return employees;
-    return employees.filter(emp => emp.managerName === currentEvaluator);
-  }, [employees, currentEvaluator, isJaquelin]);
+    if (!currentUser) return [];
+    if (isDirector) return employees;
+    return employees.filter(emp => emp.managerName === currentUser.username);
+  }, [employees, currentUser, isDirector]);
 
   const filteredEvaluationsForReport = useMemo<FullEvaluation[]>(() => {
-    if (isJaquelin) return evaluationsHistory;
-    return evaluationsHistory.filter((ev: FullEvaluation) => ev.evaluador === currentEvaluator);
-  }, [evaluationsHistory, currentEvaluator, isJaquelin]);
+    if (isDirector) return evaluationsHistory;
+    return evaluationsHistory.filter((ev: FullEvaluation) => ev.evaluador === currentUser?.username);
+  }, [evaluationsHistory, currentUser, isDirector]);
 
   const handleSaveEvaluation = (evaluation: FullEvaluation) => {
     setEvaluationsHistory(prev => {
@@ -156,7 +137,7 @@ const AppContent: React.FC = () => {
           role: parts[2] ? parts[2].trim() : 'OPERARIO',
           department: Department.Operations,
           photo: `https://picsum.photos/seed/${Math.random()}/200/200`,
-          managerName: currentEvaluator || AUTHORIZED_EVALUATORS[0],
+          managerName: currentUser?.username || AUTHORIZED_EVALUATORS[0],
           managerRole: 'Supervisor de Área',
           lastEvaluation: 'Pendiente',
           summary: '',
@@ -170,9 +151,7 @@ const AppContent: React.FC = () => {
       }
     });
 
-    if (newEmps.length > 0) {
-      setEmployees(prev => [...newEmps, ...prev]);
-    }
+    if (newEmps.length > 0) setEmployees(prev => [...newEmps, ...prev]);
   };
 
   const handleApproveBonus = (employeeId: string) => {
@@ -189,7 +168,7 @@ const AppContent: React.FC = () => {
           id: Math.random().toString(36).substr(2, 9),
           employeeId: emp.id,
           title: "¡BONO AUTORIZADO!",
-          message: `La Dirección General (${BONUS_APPROVER}) ha autorizada su bono correspondiente.`,
+          message: `La Dirección General (${BONUS_APPROVER}) ha autorizado su bono correspondiente.`,
           date: today,
           type: 'bonus',
           read: false
@@ -210,18 +189,76 @@ const AppContent: React.FC = () => {
     );
   };
 
-  if (!session) {
-    return <LoginPage />;
-  }
-
-  // Si el usuario está logueado pero necesita completar su perfil
-  if (needsProfileCompletion && user) {
-    return <ProfileCompletionForm userId={user.id} onProfileComplete={() => {
-      setNeedsProfileCompletion(false);
-      // Forzar una re-carga del perfil para actualizar el nombre y rol en la UI
-      // Esto se puede hacer llamando a fetchUserProfile() directamente o forzando un re-render
-      // Para simplificar, el useEffect de user se encargará de re-fetch al cambiar el estado.
-    }} />;
+  if (!currentUser || !isAuthenticated) {
+    const usersTable = VulcanDB.getUsers();
+    return (
+      <div className="min-h-screen bg-[#001a33] flex items-center justify-center p-6">
+        <div className="bg-white rounded-[40px] shadow-2xl max-w-md w-full p-10 text-center animate-in zoom-in duration-500">
+          <div className="mb-6 flex justify-center">
+            <div className="w-16 h-1 bg-[#FFCC00] rounded-full"></div>
+          </div>
+          <h1 className="text-3xl font-black text-[#003366] tracking-tighter mb-2">VULCAN<span className="text-[#FFCC00]">HR</span></h1>
+          
+          {!currentUser ? (
+            <>
+              <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mb-8">Acceso a Tabla de Usuarios</p>
+              <div className="space-y-3">
+                {usersTable.map(user => (
+                  <button
+                    key={user.username}
+                    onClick={() => setCurrentUser(user)}
+                    className={`w-full p-4 border-2 rounded-2xl text-sm font-bold flex justify-between items-center group transition-all hover:scale-[1.02] active:scale-95 ${
+                      user.role === UserRole.Director ? 'bg-[#003366] text-[#FFCC00] border-[#003366]' : 'bg-slate-50 border-slate-100 text-[#003366]'
+                    }`}
+                  >
+                    {user.username}
+                    <span className="text-[10px] opacity-60 font-black uppercase">{user.role}</span>
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : (
+            <form onSubmit={handleAuth} className="animate-in slide-in-from-bottom-4">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Perfil: {currentUser.username}</p>
+              <h2 className="text-xl font-black text-[#003366] mb-6 uppercase tracking-tight">
+                {!currentUser.password ? 'Establecer Clave Personal' : 'Ingrese su Clave'}
+              </h2>
+              {!currentUser.password && (
+                <p className="text-[10px] text-slate-400 mb-6 bg-amber-50 p-4 rounded-xl border border-amber-100 font-bold uppercase">
+                  ⚠️ Cree una clave única para su usuario.
+                </p>
+              )}
+              <input
+                autoFocus
+                type="password"
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.target.value)}
+                placeholder="••••••••"
+                className={`w-full p-4 bg-slate-50 border-2 rounded-2xl text-center text-lg font-black tracking-[0.5em] outline-none transition-all ${loginError ? 'border-rose-300 bg-rose-50' : 'focus:border-[#003366] border-slate-100'}`}
+              />
+              {loginError && <p className="text-[10px] text-rose-500 font-black uppercase mt-4 animate-bounce">Clave Incorrecta</p>}
+              
+              <div className="grid grid-cols-2 gap-4 mt-8">
+                <button 
+                  type="button"
+                  onClick={() => { setCurrentUser(null); setPasswordInput(''); setLoginError(false); }}
+                  className="py-4 text-slate-400 font-black uppercase text-[10px] tracking-widest"
+                >
+                  Regresar
+                </button>
+                <button 
+                  type="submit"
+                  className="py-4 bg-[#003366] text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl shadow-blue-900/20"
+                >
+                  {!currentUser.password ? 'Guardar Clave' : 'Acceder'}
+                </button>
+              </div>
+            </form>
+          )}
+          <p className="mt-8 text-[9px] text-slate-300 font-bold uppercase tracking-widest">Base de Datos de Usuarios Activa</p>
+        </div>
+      </div>
+    );
   }
 
   const renderContent = () => {
@@ -243,14 +280,14 @@ const AppContent: React.FC = () => {
       setIsAddingEmployee(false);
     }} onCancel={() => setIsAddingEmployee(false)} /></div>;
 
-    if (evaluatingEmployee) return <div className="py-8"><EvaluationForm employee={evaluatingEmployee} evaluatorName={currentEvaluator || 'Desconocido'} onClose={() => { setEvaluatingEmployee(null); setActiveTab('dashboard'); }} onSave={handleSaveEvaluation} /></div>;
+    if (evaluatingEmployee) return <div className="py-8"><EvaluationForm employee={evaluatingEmployee} evaluatorName={currentUser.username} onClose={() => { setEvaluatingEmployee(null); setActiveTab('dashboard'); }} onSave={handleSaveEvaluation} /></div>;
     if (selectedEmployee) return <EmployeeDetails employee={selectedEmployee} evaluations={evaluationsHistory} onBack={() => setSelectedEmployee(null)} />;
 
     switch (activeTab) {
       case 'dashboard': return <Dashboard employees={filteredEmployees} />;
       case 'employees': return <EmployeeList employees={filteredEmployees} onSelect={setSelectedEmployee} onAddNew={() => setIsAddingEmployee(true)} onBulkAdd={handleBulkAdd} />;
       case 'evaluations':
-        if (currentEvaluatorRole === 'director') { // Usar el rol para la lógica de aprobación de bonos
+        if (isDirector) {
           const pending = evaluationsHistory.filter((ev: FullEvaluation) => ev.condicionBono === BonusStatus.PendingAuth);
           return (
             <div className="space-y-10">
@@ -319,18 +356,13 @@ const AppContent: React.FC = () => {
     }
   };
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-  };
-
   return (
     <Layout 
       activeTab={activeTab} 
-      setActiveTab={(tab) => { setActiveTab(tab); }} 
+      setActiveTab={setActiveTab} 
       onDownloadReports={() => setShowReportsModal(true)} 
-      evaluatorName={currentEvaluator} 
-      evaluatorRole={currentEvaluatorRole}
-      onChangeEvaluator={handleSignOut}
+      evaluatorName={currentUser.username} 
+      onChangeEvaluator={() => { setCurrentUser(null); setIsAuthenticated(false); setPasswordInput(''); }}
       isSyncing={isSyncing}
     >
       {renderContent()}
@@ -338,12 +370,5 @@ const AppContent: React.FC = () => {
     </Layout>
   );
 };
-
-const App: React.FC = () => (
-  <SessionContextProvider>
-    <Toaster /> {/* Añadir Toaster aquí para mostrar notificaciones */}
-    <AppContent />
-  </SessionContextProvider>
-);
 
 export default App;

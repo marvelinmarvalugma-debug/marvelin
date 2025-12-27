@@ -6,10 +6,8 @@ import { Employee, FullEvaluation } from "../types";
  * Generates insights about an employee's performance based on their KPIs.
  */
 export async function generatePerformanceInsights(employee: Employee) {
-  const apiKey = process.env.API_KEY;
-  if (!apiKey) return { summary: "Servicio no configurado.", strengths: [], growthAreas: [] };
-
-  const ai = new GoogleGenAI({ apiKey });
+  // Use named parameter and direct process.env.API_KEY as per guidelines
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const kpiDetails = employee.kpis.map(k => `${k.name}: ${k.score}/100`).join(', ');
   
   const prompt = `Analiza el desempeño de ${employee.name}, ${employee.role} en ${employee.department}. 
@@ -34,6 +32,7 @@ export async function generatePerformanceInsights(employee: Employee) {
       }
     });
     
+    // Using response.text as a property, not a method
     const text = response.text;
     if (!text) return { summary: "Sin respuesta del modelo.", strengths: [], growthAreas: [] };
     
@@ -48,10 +47,8 @@ export async function generatePerformanceInsights(employee: Employee) {
  * Analyzes a full evaluation report to provide strategic HR feedback.
  */
 export async function analyzeFullEvaluation(employee: Employee, evaluation: FullEvaluation) {
-  const apiKey = process.env.API_KEY;
-  if (!apiKey) return null;
-
-  const ai = new GoogleGenAI({ apiKey });
+  // Use named parameter and direct process.env.API_KEY as per guidelines
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const compDetails = evaluation.criteria.map(c => `${c.name}: ${c.score}/5`).join(', ');
   const kpiDetails = employee.kpis.map(k => `${k.name}: ${k.score}/100`).join(', ');
 
@@ -83,6 +80,7 @@ export async function analyzeFullEvaluation(employee: Employee, evaluation: Full
       }
     });
 
+    // Using response.text as a property, not a method
     const text = response.text;
     if (!text) return null;
 
