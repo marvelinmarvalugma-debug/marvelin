@@ -24,7 +24,6 @@ const Layout: React.FC<LayoutProps> = ({
 }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
-  // Obtener datos del usuario actual para el layout
   const user = evaluatorName ? VulcanDB.getUser(evaluatorName) : null;
   const isDirector = user?.role === UserRole.Director;
 
@@ -34,6 +33,10 @@ const Layout: React.FC<LayoutProps> = ({
     { id: 'evaluations', label: isDirector ? 'Aprobación Bonos' : 'Matriz Desempeño', icon: isDirector ? '✅' : '📝' },
   ];
 
+  if (isDirector) {
+    navItems.push({ id: 'database', label: 'Base de Datos', icon: '🗄️' });
+  }
+
   const handleTabChange = (id: string) => {
     setActiveTab(id);
     setIsSidebarOpen(false);
@@ -41,7 +44,6 @@ const Layout: React.FC<LayoutProps> = ({
 
   return (
     <div className="flex h-screen bg-slate-100 font-sans overflow-hidden">
-      {/* Sidebar Overlay para Mobile */}
       {isSidebarOpen && (
         <div 
           className="fixed inset-0 bg-[#001a33]/60 z-[60] lg:hidden backdrop-blur-sm transition-opacity"
@@ -49,7 +51,6 @@ const Layout: React.FC<LayoutProps> = ({
         />
       )}
 
-      {/* Sidebar */}
       <aside className={`
         fixed inset-y-0 left-0 z-[70] w-64 bg-[#001a33] text-white flex flex-col shadow-2xl transition-transform duration-300
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
@@ -63,7 +64,7 @@ const Layout: React.FC<LayoutProps> = ({
           <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden text-white bg-white/10 p-2 rounded-xl">✕</button>
         </div>
         
-        <nav className="flex-1 mt-8">
+        <nav className="flex-1 mt-8 overflow-y-auto">
           {navItems.map((item) => (
             <button
               key={item.id}
@@ -112,7 +113,6 @@ const Layout: React.FC<LayoutProps> = ({
         )}
       </aside>
 
-      {/* Contenedor Principal */}
       <div className="flex-1 flex flex-col min-w-0 lg:ml-64 print:ml-0 transition-all duration-300">
         <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md shadow-sm border-b border-slate-100 px-6 lg:px-10 py-4 lg:py-5 flex justify-between items-center print:hidden">
           <div className="flex items-center">

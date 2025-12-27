@@ -7,6 +7,7 @@ import EmployeeDetails from './components/EmployeeDetails';
 import EvaluationForm from './components/EvaluationForm';
 import AddEmployeeForm from './components/AddEmployeeForm';
 import MonthlyReportModal from './components/MonthlyReportModal';
+import DatabaseConsole from './components/DatabaseConsole';
 import { VulcanDB } from './services/storageService';
 import { 
   Employee, FullEvaluation, Department, 
@@ -40,9 +41,14 @@ const App: React.FC = () => {
       setIsSyncing(true);
       if (payload.type === 'SYNC_EMPLOYEES') setEmployees(payload.data);
       if (payload.type === 'SYNC_EVALUATIONS') setEvaluationsHistory(payload.data);
+      if (payload.type === 'SYNC_USERS' && currentUser) {
+        // Actualizar currentUser si cambió en otra pestaña
+        const updated = (payload.data as User[]).find(u => u.username === currentUser.username);
+        if (updated) setCurrentUser(updated);
+      }
       setTimeout(() => setIsSyncing(false), 800);
     });
-  }, []);
+  }, [currentUser]);
 
   useEffect(() => {
     if (isInitialized) {
@@ -64,7 +70,6 @@ const App: React.FC = () => {
     e.preventDefault();
     if (!currentUser) return;
 
-    // Si el usuario no tiene clave registrada, la establece ahora
     if (!currentUser.password) {
       if (passwordInput.length < 4) {
         alert("La clave debe tener al menos 4 caracteres.");
@@ -76,7 +81,6 @@ const App: React.FC = () => {
       setIsAuthenticated(true);
       setLoginError(false);
     } else {
-      // Validación normal contra la tabla
       if (passwordInput === currentUser.password) {
         setIsAuthenticated(true);
         setLoginError(false);
@@ -286,6 +290,7 @@ const App: React.FC = () => {
     switch (activeTab) {
       case 'dashboard': return <Dashboard employees={filteredEmployees} />;
       case 'employees': return <EmployeeList employees={filteredEmployees} onSelect={setSelectedEmployee} onAddNew={() => setIsAddingEmployee(true)} onBulkAdd={handleBulkAdd} />;
+      case 'database': return <DatabaseConsole />;
       case 'evaluations':
         if (isDirector) {
           const pending = evaluationsHistory.filter((ev: FullEvaluation) => ev.condicionBono === BonusStatus.PendingAuth);
