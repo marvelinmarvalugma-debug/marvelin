@@ -1,12 +1,7 @@
 
 export enum Department {
-  Engineering = 'Engineering',
-  Marketing = 'Marketing',
-  Sales = 'Sales',
-  Product = 'Product',
-  HR = 'HR',
-  Operations = 'Operativa',
-  Administrative = 'Administrativa'
+  ATO = 'ATO',
+  VULCAN = 'VULCAN'
 }
 
 export enum UserRole {
@@ -53,10 +48,10 @@ export interface VulcanNotification {
 
 export interface Employee {
   id: string;
-  idNumber: string; // Cédula
+  idNumber: string;
   name: string;
   role: string;
-  department: Department;
+  department: string;
   photo: string;
   managerName: string;
   managerRole: string;
@@ -73,11 +68,12 @@ export interface FullEvaluation {
   año: string;
   evaluador: string;
   cargoEvaluador: string;
-  areaDesempeño: 'Operativa' | 'Administrativa';
+  areaDesempeño: string;
   criteria: TechnicalCriterion[];
   observaciones: string;
   condicionBono: BonusStatus;
   recomendacionSalarial: string; 
+  incrementoSalarial?: string; 
   totalPuntos: number;
   promedioFinal: number;
   date: string;
@@ -85,13 +81,27 @@ export interface FullEvaluation {
 }
 
 export const AUTHORIZED_EVALUATORS = [
-  "NELSON MARCANO",
-  "DANIEL FARRERA",
-  "JOSE VILLARROEL",
-  "HUGO PEÑA",
-  "ROMER VASQUEZ",
-  "ROGER VASQUEZ",
-  "JAQUELIN NAIM"
+  "Xuezhi Jin",
+  "Aurelio Cuya",
+  "Hector Quezada",
+  "Nelson Marcano",
+  "Roger Vásquez",
+  "Roger Vazquez",
+  "José Villarroel",
+  "Daniel Farrera",
+  "Jacquelin Naim",
+  "Jacqueline Naim",
+  "Oscar Gil",
+  "Andy Song",
+  "Jessen Liu",
+  "Frank Rendon",
+  "Lucas Li",
+  "Ryan Song",
+  "Ait",
+  "Jaime Wang",
+  "Grisélida Gibbs"
 ];
 
-export const BONUS_APPROVER = "JAQUELIN NAIM";
+// Gerentes con poder de decisión salarial y aprobación de bonos (Solo los 3 especificados)
+export const SALARY_APPROVERS = ["Xuezhi Jin", "Jacquelin Naim", "Jacqueline Naim", "Aurelio Cuya"];
+export const BONUS_APPROVER = "Jacquelin Naim";

@@ -1,16 +1,18 @@
 
-import React, { useState } from 'react';
-import { Employee, FullEvaluation } from '../types';
+import React, { useState, useMemo } from 'react';
+import { Employee, FullEvaluation, UserRole } from '../types';
 import { generatePerformanceInsights } from '../services/geminiService';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer } from 'recharts';
+import { VulcanDB } from '../services/storageService';
 
 interface EmployeeDetailsProps {
   employee: Employee;
   evaluations?: FullEvaluation[];
   onBack: () => void;
+  currentUserRole?: UserRole;
 }
 
-export default function EmployeeDetails({ employee, evaluations = [], onBack }: EmployeeDetailsProps) {
+export default function EmployeeDetails({ employee, evaluations = [], onBack, currentUserRole }: EmployeeDetailsProps) {
   const [loadingAI, setLoadingAI] = useState(false);
   const [aiAnalysis, setAiAnalysis] = useState<{summary: string, strengths: string[], growthAreas: string[]} | null>(null);
 
@@ -29,10 +31,11 @@ export default function EmployeeDetails({ employee, evaluations = [], onBack }: 
 
   const overallScore = Math.round(employee.kpis.reduce((sum, kpi) => sum + kpi.score * (kpi.weight / 100), 0));
 
-  // Filtrar evaluaciones solo para este empleado y ordenarlas por fecha
   const employeeHistory = evaluations
     .filter(ev => ev.employeeId === employee.id)
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  const isDirector = currentUserRole === UserRole.Director;
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in">
@@ -113,11 +116,14 @@ export default function EmployeeDetails({ employee, evaluations = [], onBack }: 
                       </div>
                     </div>
                     <div className="text-right">
-                        <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase ${
-                            ev.condicionBono.includes('Aprobado') ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
-                        }`}>
-                            {ev.condicionBono}
-                        </span>
+                        {isDirector && (
+                          <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase ${
+                              ev.condicionBono.includes('Aprobado') ? 'bg-emerald-100 text-emerald-700' : 
+                              ev.condicionBono.includes('Pendiente') ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'
+                          }`}>
+                              {ev.condicionBono}
+                          </span>
+                        )}
                         <p className="text-[9px] text-slate-300 font-bold mt-2 uppercase tracking-tighter">Registrado el {ev.date}</p>
                     </div>
                   </div>

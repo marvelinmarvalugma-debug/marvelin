@@ -12,7 +12,8 @@ const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({ onAdd, onCancel }) =>
     idNumber: '',
     name: '',
     role: '',
-    department: Department.Operations,
+    // Fix: Using correct Department enum member (ATO instead of Operations)
+    department: Department.ATO,
     photo: `https://picsum.photos/seed/${Math.random()}/200/200`,
     managerName: 'Administrador Vulcan',
     managerRole: 'Supervisor de Area'
@@ -76,8 +77,9 @@ const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({ onAdd, onCancel }) =>
               value={formData.department}
               onChange={e => setFormData({...formData, department: e.target.value as Department})}
             >
-              <option value={Department.Operations}>Operativo</option>
-              <option value={Department.Administrative}>Administrativo</option>
+              {/* Fix: Using correct Department enum members (ATO/VULCAN instead of Operations/Administrative) */}
+              <option value={Department.ATO}>Operativo</option>
+              <option value={Department.VULCAN}>Administrativo</option>
             </select>
           </div>
           <div className="space-y-1">

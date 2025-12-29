@@ -1,17 +1,53 @@
 
-import { Department, Employee, TechnicalCriterion, AUTHORIZED_EVALUATORS } from './types';
+import { Department, Employee, TechnicalCriterion } from './types';
 
-export const VULCAN_CRITERIA: Omit<TechnicalCriterion, 'score'>[] = [
-  { id: 'c1', name: 'Cumplimiento de normas SIHOA', description: 'Adherencia a los protocolos de seguridad, higiene ocupacional y ambiente según la normativa vigente' },
-  { id: 'c2', name: 'Inmediatez en los reportes', description: 'Tiempo de respuesta ante eventos operacionales, fallas, incidentes o requerimientos' },
-  { id: 'c3', name: 'Ejecución de las tareas asignadas', description: 'Grado de cumplimiento, calidad y oportunidad en la ejecución de las actividades operativas' },
-  { id: 'c4', name: 'Uso adecuado de equipos y herramientas', description: 'Manejo responsable, técnico y seguro de los recursos asignados' },
-  { id: 'c5', name: 'Registro y trazabilidad de las actividades', description: 'Documentación clara, completa y oportuna de las tareas, inspecciones y reportes' },
-  { id: 'c6', name: 'Coordinación con supervisores y pares', description: 'Nivel de comunicación, alineación y colaboración con el equipo de trabajo' },
-  { id: 'c7', name: 'Respuesta ante contingencias', description: 'Capacidad de reacción, criterio técnico y apego a los protocolos en situaciones no previstas' },
-  { id: 'c8', name: 'Cumplimiento de horarios y turnos', description: 'Puntualidad, permanencia en el sitio, y respeto por la planificación operativa' },
-  { id: 'c9', name: 'Actitud profesional y respeto institucional', description: 'Comportamiento ético, respeto por las normas internas y trato adecuado con compañeros y supervisores' },
-  { id: 'c10', name: 'Proactividad e iniciativa', description: 'Capacidad para anticiparse a las necesidades, proponer mejoras y actuar sin requerimiento directo' },
+export interface CategorizedCriterion extends Omit<TechnicalCriterion, 'score'> {
+  category: string;
+}
+
+// MATRIZ ATO (OPERATIVA - SEGÚN PDF 1)
+export const ATO_CRITERIA: CategorizedCriterion[] = [
+  { id: 'ato_1', category: 'Técnica y Operacional', name: 'Cumplimiento de normas SIHOA', description: 'Adherencia a los protocolos de seguridad, higiene ocupacional y ambiente según la normativa vigente' },
+  { id: 'ato_2', category: 'Técnica y Operacional', name: 'Inmediatez en los reportes', description: 'Tiempo de respuesta ante eventos operacionales, fallas, incidentes o requerimientos' },
+  { id: 'ato_3', category: 'Técnica y Operacional', name: 'Ejecución de las tareas asignadas', description: 'Grado de cumplimiento, calidad y oportunidad en la ejecución de las actividades operativas' },
+  { id: 'ato_4', category: 'Técnica y Operacional', name: 'Uso adecuado de equipos y herramientas', description: 'Manejo responsable, técnico y seguro de los recursos asignados' },
+  { id: 'ato_5', category: 'Técnica y Operacional', name: 'Registro y trazabilidad de las actividades', description: 'Documentación clara, completa y oportuna de las tareas, inspecciones y reportes' },
+  { id: 'ato_6', category: 'Técnica y Operacional', name: 'Coordinación con supervisores y pares', description: 'Nivel de comunicación, alineación y colaboración con el equipo de trabajo' },
+  { id: 'ato_7', category: 'Técnica y Operacional', name: 'Respuesta ante contingencias', description: 'Capacidad de reacción, criterio técnico y apego a los protocolos en situaciones no previstas' },
+  { id: 'ato_8', category: 'Técnica y Operacional', name: 'Cumplimiento de horarios y turnos', description: 'Puntualidad, permanencia en el sitio, y respeto por la planificación operativa' },
+  { id: 'ato_9', category: 'Técnica y Operacional', name: 'Actitud profesional y respeto institucional', description: 'Comportamiento ético, respeto por las normas internas y trato adecuado con compañeros y supervisores' },
+  { id: 'ato_10', category: 'Técnica y Operacional', name: 'Proactividad e iniciativa', description: 'Capacidad para anticiparse a las necesidades, proponer mejoras y actuar sin requerimiento directo' },
+];
+
+// MATRIZ VULCAN (ADMINISTRATIVA - SEGÚN PDF 2)
+export const VULCAN_CRITERIA: CategorizedCriterion[] = [
+  // 2. Indicadores de Desempeño
+  { id: 'v_ind_1', category: 'Indicadores de Desempeño', name: 'Productividad', description: 'Cumple con las metas de producción y tareas asignadas en los tiempos estipulados' },
+  { id: 'v_ind_2', category: 'Indicadores de Desempeño', name: 'Cumplimiento de plazos', description: 'Entrega las tareas y proyectos dentro de los plazos establecidos' },
+  { id: 'v_ind_3', category: 'Indicadores de Desempeño', name: 'Calidad del trabajo', description: 'Realiza su trabajo con un bajo margen de error, asegurando la calidad de los productos y servicios' },
+  { id: 'v_ind_4', category: 'Indicadores de Desempeño', name: 'Seguridad laboral', description: 'Cumple con todas las normativas de seguridad, protegiendo su bienestar y el de sus compañeros' },
+  { id: 'v_ind_5', category: 'Indicadores de Desempeño', name: 'Cumplimiento de normativas legales', description: 'Conoce y sigue las regulaciones locales e internacionales aplicables al sector petrolero' },
+  { id: 'v_ind_6', category: 'Indicadores de Desempeño', name: 'Eficiencia en el uso de recursos', description: 'Optimiza el uso de materiales, equipos y tiempo sin comprometer la calidad ni la seguridad' },
+
+  // 3. Competencias Técnicas y Operativas
+  { id: 'v_tec_1', category: 'Competencias Técnicas y Operativas', name: 'Conocimiento Técnico', description: 'Posee los conocimientos necesarios sobre equipos, procesos y tecnología en la industria petrolera' },
+  { id: 'v_tec_2', category: 'Competencias Técnicas y Operativas', name: 'Manejo de Equipos', description: 'Capacidad para operar, mantener y reparar equipos y maquinarias específicos del sector' },
+  { id: 'v_tec_3', category: 'Competencias Técnicas y Operativas', name: 'Habilidad para solucionar problemas', description: 'Resuelve problemas técnicos o imprevistos con eficacia y rapidez' },
+  { id: 'v_tec_4', category: 'Competencias Técnicas y Operativas', name: 'Adaptabilidad a cambios tecnológicos', description: 'Se adapta a nuevas herramientas, tecnologías o procesos rápidamente' },
+  { id: 'v_tec_5', category: 'Competencias Técnicas y Operativas', name: 'Gestión de proyectos', description: 'Participa activamente en la planificación y ejecución de proyectos en su área de responsabilidad' },
+
+  // 4. Competencias Blandas
+  { id: 'v_bla_1', category: 'Competencias blandas', name: 'Trabajo en equipo', description: 'Colabora de manera efectiva con sus compañeros y otros departamentos' },
+  { id: 'v_bla_2', category: 'Competencias blandas', name: 'Comunicación', description: 'Expresa ideas de manera clara y efectiva, tanto oralmente como por escrito' },
+  { id: 'v_bla_3', category: 'Competencias blandas', name: 'Liderazgo', description: 'Si aplica, dirige y motiva a su equipo para cumplir con los objetivos y mejorar el rendimiento' },
+  { id: 'v_bla_4', category: 'Competencias blandas', name: 'Resolución de conflictos', description: 'Maneja y resuelve conflictos dentro del equipo de manera profesional y eficiente' },
+  { id: 'v_bla_5', category: 'Competencias blandas', name: 'Gestión del tiempo', description: 'Organiza eficazmente su jornada laboral, priorizando tareas importantes y cumpliendo con los plazos' },
+
+  // 5. Cultura Organizacional
+  { id: 'v_cul_1', category: 'Cumplimiento de la cultura organizacional', name: 'Compromiso con la empresa', description: 'Muestra dedicación y responsabilidad en su trabajo' },
+  { id: 'v_cul_2', category: 'Cumplimiento de la cultura organizacional', name: 'Responsabilidad ambiental', description: 'Cumple con las políticas de sostenibilidad y gestión ambiental de la empresa' },
+  { id: 'v_cul_3', category: 'Cumplimiento de la cultura organizacional', name: 'Compromiso con la seguridad', description: 'Prioriza la seguridad de las personas y los equipos en el trabajo' },
+  { id: 'v_cul_4', category: 'Cumplimiento de la cultura organizacional', name: 'Ética profesional', description: 'Actúa con honestidad y en conformidad con los principios éticos de la empresa' },
 ];
 
 const DEFAULT_KPIS = [
@@ -20,34 +56,7 @@ const DEFAULT_KPIS = [
   { id: 'k3', name: 'Seguridad SIHOA', score: 0, weight: 30 }
 ];
 
-// Función para asignar evaluadores de forma rotativa a la nómina inicial
-const assignEvaluator = (index: number) => AUTHORIZED_EVALUATORS[index % AUTHORIZED_EVALUATORS.length];
-
 export const INITIAL_EMPLOYEES: Employee[] = [
-  { id: 'v1', idNumber: '8.974.572', name: 'VELASQUEZ, SIMON ARMANDO', role: 'SUPERVISOR CAMPO CARIÑA SUR', department: Department.Operations, photo: 'https://picsum.photos/seed/v1/200/200', managerName: assignEvaluator(0), managerRole: 'Supervisor Principal', lastEvaluation: 'Pendiente', summary: 'Personal de campo.', kpis: DEFAULT_KPIS },
-  { id: 'v2', idNumber: '10.067.494', name: 'MARIN MARTINEZ, YOEL J.', role: 'SUPERVISOR CAMPO CARIÑA NORTE', department: Department.Operations, photo: 'https://picsum.photos/seed/v2/200/200', managerName: assignEvaluator(1), managerRole: 'Supervisor Principal', lastEvaluation: 'Pendiente', summary: 'Personal de campo.', kpis: DEFAULT_KPIS },
-  { id: 'v3', idNumber: '10.835.585', name: 'BARRETO MAITA, GRUVEL LISANDRO', role: 'OPERADOR DE ESTACION', department: Department.Operations, photo: 'https://picsum.photos/seed/v3/200/200', managerName: assignEvaluator(2), managerRole: 'Supervisor Principal', lastEvaluation: 'Pendiente', summary: 'Personal operativo.', kpis: DEFAULT_KPIS },
-  { id: 'v4', idNumber: '10.937.595', name: 'RONDON, CARLOS DANIEL', role: 'SUPERVISOR ESTACION MULTIFASICA', department: Department.Operations, photo: 'https://picsum.photos/seed/v4/200/200', managerName: assignEvaluator(3), managerRole: 'Supervisor Principal', lastEvaluation: 'Pendiente', summary: 'Liderazgo técnico.', kpis: DEFAULT_KPIS },
-  { id: 'v5', idNumber: '11.435.750', name: 'RODRIGUEZ ABANERO, JESUS', role: 'OPERADOR DE ESTACION', department: Department.Operations, photo: 'https://picsum.photos/seed/v5/200/200', managerName: assignEvaluator(4), managerRole: 'Supervisor Principal', lastEvaluation: 'Pendiente', summary: 'Personal operativo.', kpis: DEFAULT_KPIS },
-  { id: 'v6', idNumber: '11.640.728', name: 'GONZALEZ LOPEZ, FELIX E.', role: 'OPERADOR DE PRODUCCION', department: Department.Operations, photo: 'https://picsum.photos/seed/v6/200/200', managerName: assignEvaluator(5), managerRole: 'Supervisor Principal', lastEvaluation: 'Pendiente', summary: 'Personal operativo.', kpis: DEFAULT_KPIS },
-  { id: 'v7', idNumber: '12.438.753', name: 'LEDEZMA, ROSALIO RAFAEL', role: 'OPERADOR DE PRODUCCION', department: Department.Operations, photo: 'https://picsum.photos/seed/v7/200/200', managerName: assignEvaluator(6), managerRole: 'Supervisor Principal', lastEvaluation: 'Pendiente', summary: 'Personal operativo.', kpis: DEFAULT_KPIS },
-  { id: 'v8', idNumber: '12.677.861', name: 'MARTINEZ VILLALBA, MARCOS', role: 'OPERADOR DE PRODUCCION', department: Department.Operations, photo: 'https://picsum.photos/seed/v8/200/200', managerName: assignEvaluator(0), managerRole: 'Supervisor Principal', lastEvaluation: 'Pendiente', summary: 'Personal operativo.', kpis: DEFAULT_KPIS },
-  { id: 'v9', idNumber: '12.680.774', name: 'GOMEZ, CARLOS ARMANDO', role: 'OPERADOR DE PRODUCCION', department: Department.Operations, photo: 'https://picsum.photos/seed/v9/200/200', managerName: assignEvaluator(1), managerRole: 'Supervisor Principal', lastEvaluation: 'Pendiente', summary: 'Personal operativo.', kpis: DEFAULT_KPIS },
-  { id: 'v10', idNumber: '12.681.284', name: 'MOLINA ROJAS, SERGIO DANIEL', role: 'OPERADOR DE PRODUCCION', department: Department.Operations, photo: 'https://picsum.photos/seed/v10/200/200', managerName: assignEvaluator(2), managerRole: 'Supervisor Principal', lastEvaluation: 'Pendiente', summary: 'Personal operativo.', kpis: DEFAULT_KPIS },
-  { id: 'v11', idNumber: '14.029.787', name: 'PEREZ SANTAELLA, RICHARD ANTONIO', role: 'OPERADOR DE ESTACION', department: Department.Operations, photo: 'https://picsum.photos/seed/v11/200/200', managerName: assignEvaluator(3), managerRole: 'Supervisor Principal', lastEvaluation: 'Pendiente', summary: 'Personal operativo.', kpis: DEFAULT_KPIS },
-  { id: 'v12', idNumber: '14.817.977', name: 'MORENO PATETY, GREGURYS JESUS', role: 'OPERADOR DE PRODUCCION', department: Department.Operations, photo: 'https://picsum.photos/seed/v12/200/200', managerName: assignEvaluator(4), managerRole: 'Supervisor Principal', lastEvaluation: 'Pendiente', summary: 'Personal operativo.', kpis: DEFAULT_KPIS },
-  { id: 'v13', idNumber: '15.005.659', name: 'GARCIA ROJAS, VICENTE P.', role: 'OPERADOR DE PRODUCCION', department: Department.Operations, photo: 'https://picsum.photos/seed/v13/200/200', managerName: assignEvaluator(5), managerRole: 'Supervisor Principal', lastEvaluation: 'Pendiente', summary: 'Personal operativo.', kpis: DEFAULT_KPIS },
-  { id: 'v14', idNumber: '15.126.252', name: 'SANTAMARIA, JEAN PIERO', role: 'OPERADOR DE PRODUCCION', department: Department.Operations, photo: 'https://picsum.photos/seed/v14/200/200', managerName: assignEvaluator(6), managerRole: 'Supervisor Principal', lastEvaluation: 'Pendiente', summary: 'Personal operativo.', kpis: DEFAULT_KPIS },
-  { id: 'v15', idNumber: '15.375.908', name: 'PEREZ R., JUAN A.', role: 'OPERADOR DE PRODUCCION', department: Department.Operations, photo: 'https://picsum.photos/seed/v15/200/200', managerName: assignEvaluator(0), managerRole: 'Supervisor Principal', lastEvaluation: 'Pendiente', summary: 'Personal operativo.', kpis: DEFAULT_KPIS },
-  { id: 'v16', idNumber: '16.832.346', name: 'URRIBARRI SIMANCAS, JORGE L', role: 'OPERADOR DE ESTACION', department: Department.Operations, photo: 'https://picsum.photos/seed/v16/200/200', managerName: assignEvaluator(1), managerRole: 'Supervisor Principal', lastEvaluation: 'Pendiente', summary: 'Personal operativo.', kpis: DEFAULT_KPIS },
-  { id: 'v17', idNumber: '17.262.102', name: 'ALFONZO, RAUL', role: 'OPERADOR DE PRODUCCION', department: Department.Operations, photo: 'https://picsum.photos/seed/v17/200/200', managerName: assignEvaluator(2), managerRole: 'Supervisor Principal', lastEvaluation: 'Pendiente', summary: 'Personal operativo.', kpis: DEFAULT_KPIS },
-  { id: 'v18', idNumber: '18.414.421', name: 'AGUILERA G, JONATHAN J', role: 'SUPERVISOR ESTACION MULTIFASICA', department: Department.Operations, photo: 'https://picsum.photos/seed/v18/200/200', managerName: assignEvaluator(3), managerRole: 'Supervisor Principal', lastEvaluation: 'Pendiente', summary: 'Liderazgo técnico.', kpis: DEFAULT_KPIS },
-  { id: 'v19', idNumber: '12.680.014', name: 'MAITA, FREDDY', role: 'OPERADOR DE PRODUCCION', department: Department.Operations, photo: 'https://picsum.photos/seed/v19/200/200', managerName: assignEvaluator(4), managerRole: 'Supervisor Principal', lastEvaluation: 'Pendiente', summary: 'Personal operativo.', kpis: DEFAULT_KPIS },
-  { id: 'v20', idNumber: '18.112.864', name: 'RODRIGUEZ, RONALD', role: 'COORDINADOR DE ESTACIÓN', department: Department.Operations, photo: 'https://picsum.photos/seed/v20/200/200', managerName: assignEvaluator(5), managerRole: 'Supervisor Principal', lastEvaluation: 'Pendiente', summary: 'Coordinación operativa.', kpis: DEFAULT_KPIS },
-  { id: 'v21', idNumber: '10.936.415', name: 'URPIN, ANGEL', role: 'SUPERVISOR ESTACION BARED10', department: Department.Operations, photo: 'https://picsum.photos/seed/v21/200/200', managerName: assignEvaluator(6), managerRole: 'Supervisor Principal', lastEvaluation: 'Pendiente', summary: 'Liderazgo operativo.', kpis: DEFAULT_KPIS },
-  { id: 'v22', idNumber: '15.716.639', name: 'BARRETO, JOHN', role: 'OPERADOR DE ESTACION', department: Department.Operations, photo: 'https://picsum.photos/seed/v22/200/200', managerName: assignEvaluator(0), managerRole: 'Supervisor Principal', lastEvaluation: 'Pendiente', summary: 'Personal operativo.', kpis: DEFAULT_KPIS },
-  { id: 'v23', idNumber: '13.611.204', name: 'CAMPOS, RAFAEL', role: 'OPERADOR DE ESTACION', department: Department.Operations, photo: 'https://picsum.photos/seed/v23/200/200', managerName: assignEvaluator(1), managerRole: 'Supervisor Principal', lastEvaluation: 'Pendiente', summary: 'Personal operativo.', kpis: DEFAULT_KPIS },
-  { id: 'v24', idNumber: '12.016.326', name: 'MARTINEZ, JESUS', role: 'OPERADOR DE ESTACION', department: Department.Operations, photo: 'https://picsum.photos/seed/v24/200/200', managerName: assignEvaluator(2), managerRole: 'Supervisor Principal', lastEvaluation: 'Pendiente', summary: 'Personal operativo.', kpis: DEFAULT_KPIS },
-  { id: 'v25', idNumber: '19.143.475', name: 'CENTENO, ANDRYKSON', role: 'OPERADOR DE ESTACION', department: Department.Operations, photo: 'https://picsum.photos/seed/v25/200/200', managerName: assignEvaluator(3), managerRole: 'Supervisor Principal', lastEvaluation: 'Pendiente', summary: 'Personal operativo.', kpis: DEFAULT_KPIS },
-  { id: 'v26', idNumber: '15.846.580', name: 'MEDINA, JOSE', role: 'OPERADOR DE ESTACION', department: Department.Operations, photo: 'https://picsum.photos/seed/v26/200/200', managerName: assignEvaluator(4), managerRole: 'Supervisor Principal', lastEvaluation: 'Pendiente', summary: 'Personal operativo.', kpis: DEFAULT_KPIS },
+  { id: 'vul1', idNumber: '14.462.190', name: 'Jacquelin Naim', role: 'Gerente Administrativa', department: Department.VULCAN, photo: 'https://picsum.photos/seed/14462190/200/200', managerName: 'Xuezhi Jin', managerRole: 'Dirección General', lastEvaluation: 'Pendiente', summary: '', kpis: DEFAULT_KPIS },
+  { id: 'ato1', idNumber: '16.250.905', name: 'Nelson Marcano', role: 'Jefe de la Unidad de Producción', department: Department.ATO, photo: 'https://picsum.photos/seed/nelson/200/200', managerName: 'Hector Quezada', managerRole: 'Superintendente', lastEvaluation: 'Pendiente', summary: '', kpis: DEFAULT_KPIS },
 ];

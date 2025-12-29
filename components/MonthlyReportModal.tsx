@@ -1,21 +1,24 @@
 
 import React, { useState, useMemo } from 'react';
-import { FullEvaluation, Employee, BonusStatus, BONUS_APPROVER } from '../types';
+import { FullEvaluation, Employee, BonusStatus, BONUS_APPROVER, UserRole } from '../types';
 
 interface MonthlyReportModalProps {
   evaluations: FullEvaluation[];
   employees: Employee[];
   onClose: () => void;
+  currentUserRole?: UserRole;
 }
 
 const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
 
-export default function MonthlyReportModal({ evaluations, employees, onClose }: MonthlyReportModalProps) {
+export default function MonthlyReportModal({ evaluations, employees, onClose, currentUserRole }: MonthlyReportModalProps) {
   const currentMonthName = new Date().toLocaleString('es-ES', { month: 'long' }).toLowerCase();
   const currentYearStr = new Date().getFullYear().toString();
   
   const [selectedMonth, setSelectedMonth] = useState<string>(currentMonthName);
   const [selectedYear, setSelectedYear] = useState<string>(currentYearStr);
+
+  const isDirector = currentUserRole === UserRole.Director;
 
   const availableYears = useMemo<string[]>(() => {
     const yearsFromData = evaluations.map((e: FullEvaluation) => e.año);
@@ -34,7 +37,6 @@ export default function MonthlyReportModal({ evaluations, employees, onClose }: 
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#001a33]/90 backdrop-blur-md p-4 print:bg-white print:p-0">
       <div className="bg-white lg:rounded-[40px] shadow-2xl max-w-6xl w-full h-full lg:h-auto lg:max-h-[90vh] flex flex-col overflow-hidden">
         
-        {/* Cabecera de controles - Oculta al imprimir */}
         <div className="p-8 border-b flex flex-col md:flex-row justify-between items-center gap-6 print:hidden">
           <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight shrink-0">Reporte Consolidado</h2>
           
@@ -79,8 +81,9 @@ export default function MonthlyReportModal({ evaluations, employees, onClose }: 
                   <tr>
                     <th className="px-6 py-5 font-black text-slate-400 uppercase">Personal</th>
                     <th className="px-6 py-5 font-black text-slate-400 uppercase text-center">Score Técnico</th>
-                    <th className="px-6 py-5 font-black text-slate-400 uppercase">Estatus Bono</th>
-                    <th className="px-6 py-5 font-black text-slate-400 uppercase">Firma Dirección</th>
+                    {isDirector && <th className="px-6 py-5 font-black text-slate-400 uppercase">Incr. Vulcan</th>}
+                    {isDirector && <th className="px-6 py-5 font-black text-slate-400 uppercase">Estatus Bono</th>}
+                    {isDirector && <th className="px-6 py-5 font-black text-slate-400 uppercase">Firma Dirección</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
@@ -94,21 +97,30 @@ export default function MonthlyReportModal({ evaluations, employees, onClose }: 
                           <p className="text-[9px] text-slate-400 font-bold">V-{emp?.idNumber || 'N/A'}</p>
                         </td>
                         <td className="px-6 py-4 text-center font-black text-indigo-600">{scoreNum.toFixed(1)}%</td>
-                        <td className="px-6 py-4">
-                          <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase ${
-                            ev.condicionBono === BonusStatus.Approved ? 'bg-emerald-100 text-emerald-700' : 
-                            ev.condicionBono === BonusStatus.PendingAuth ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'
-                          }`}>
-                            {ev.condicionBono}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-[9px] font-black text-slate-500 uppercase italic">
-                          {ev.authorizedBy ? (
-                            <span className="text-emerald-600">✓ Firmado: {ev.authorizedBy}</span>
-                          ) : (
-                            <span className="opacity-40">Pendiente de firma</span>
-                          )}
-                        </td>
+                        {isDirector && (
+                          <td className="px-6 py-4 font-black text-emerald-600">
+                            {ev.incrementoSalarial || "0%"}
+                          </td>
+                        )}
+                        {isDirector && (
+                          <td className="px-6 py-4">
+                            <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase ${
+                              ev.condicionBono === BonusStatus.Approved ? 'bg-emerald-100 text-emerald-700' : 
+                              ev.condicionBono === BonusStatus.PendingAuth ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'
+                            }`}>
+                              {ev.condicionBono}
+                            </span>
+                          </td>
+                        )}
+                        {isDirector && (
+                          <td className="px-6 py-4 text-[9px] font-black text-slate-500 uppercase italic">
+                            {ev.authorizedBy ? (
+                              <span className="text-emerald-600">✓ Firmado: {ev.authorizedBy}</span>
+                            ) : (
+                              <span className="opacity-40">Pendiente de firma</span>
+                            )}
+                          </td>
+                        )}
                       </tr>
                     );
                   })}

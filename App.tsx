@@ -11,7 +11,7 @@ import DatabaseConsole from './components/DatabaseConsole';
 import { VulcanDB } from './services/storageService';
 import { 
   Employee, FullEvaluation, Department, 
-  AUTHORIZED_EVALUATORS, BONUS_APPROVER, BonusStatus, 
+  AUTHORIZED_EVALUATORS, BONUS_APPROVER, SALARY_APPROVERS, BonusStatus, 
   VulcanNotification, KPI, User, UserRole 
 } from './types';
 
@@ -42,7 +42,6 @@ const App: React.FC = () => {
       if (payload.type === 'SYNC_EMPLOYEES') setEmployees(payload.data);
       if (payload.type === 'SYNC_EVALUATIONS') setEvaluationsHistory(payload.data);
       if (payload.type === 'SYNC_USERS' && currentUser) {
-        // Actualizar currentUser si cambió en otra pestaña
         const updated = (payload.data as User[]).find(u => u.username === currentUser.username);
         if (updated) setCurrentUser(updated);
       }
@@ -91,16 +90,17 @@ const App: React.FC = () => {
   };
 
   const isDirector = currentUser?.role === UserRole.Director;
+  const isSalaryApprover = currentUser && SALARY_APPROVERS.includes(currentUser.username);
 
   const filteredEmployees = useMemo(() => {
     if (!currentUser) return [];
     if (isDirector) return employees;
-    return employees.filter(emp => emp.managerName === currentUser.username);
+    return employees.filter(emp => emp.managerName.toLowerCase().trim() === currentUser.username.toLowerCase().trim());
   }, [employees, currentUser, isDirector]);
 
   const filteredEvaluationsForReport = useMemo<FullEvaluation[]>(() => {
     if (isDirector) return evaluationsHistory;
-    return evaluationsHistory.filter((ev: FullEvaluation) => ev.evaluador === currentUser?.username);
+    return evaluationsHistory.filter((ev: FullEvaluation) => ev.evaluador.toLowerCase().trim() === currentUser?.username.toLowerCase().trim());
   }, [evaluationsHistory, currentUser, isDirector]);
 
   const handleSaveEvaluation = (evaluation: FullEvaluation) => {
@@ -124,25 +124,45 @@ const App: React.FC = () => {
     ));
   };
 
-  const handleBulkAdd = (data: string) => {
+  const handleApproveBonus = (employeeId: string, mes: string, anio: string, status: BonusStatus, increment?: string) => {
+    if (!isDirector) return;
+    setEvaluationsHistory(prev => prev.map(ev => 
+      (ev.employeeId === employeeId && ev.mes === mes && ev.año === anio) 
+        ? { ...ev, condicionBono: status, incrementoSalarial: increment || ev.incrementoSalarial, authorizedBy: currentUser?.username } 
+        : ev
+    ));
+  };
+
+  const handleBulkAdd = (data: string, type: 'ato' | 'vulcan') => {
+    if (isDirector) return;
     const lines = data.split(/\r?\n/).filter(line => line.trim() !== '');
     const newEmps: Employee[] = [];
+    const discoveredEvaluators = new Set<string>();
     
-    lines.forEach(line => {
+    lines.forEach((line, index) => {
+      const upperLine = line.toUpperCase();
+      if (index === 0 && (upperLine.includes('NOMBRE') || upperLine.includes('IDENTIDAD') || upperLine.includes('CARGO'))) {
+        return;
+      }
+
       let parts = line.split('\t');
       if (parts.length < 2) parts = line.split(';');
-      if (parts.length < 2) parts = line.split(',');
 
       if (parts.length >= 2) {
+        const idNum = parts[0]?.trim() || `ID-${Math.random().toString(36).substr(2, 5)}`;
+        const name = parts[1]?.trim() || 'SIN NOMBRE';
+        const role = parts[2]?.trim() || 'PERSONAL';
+        const manager = parts[4]?.trim() || currentUser?.username || 'Casa Matriz';
+
         newEmps.push({
           id: Math.random().toString(36).substr(2, 9),
-          idNumber: parts[0].trim(),
-          name: parts[1].trim(),
-          role: parts[2] ? parts[2].trim() : 'OPERARIO',
-          department: Department.Operations,
-          photo: `https://picsum.photos/seed/${Math.random()}/200/200`,
-          managerName: currentUser?.username || AUTHORIZED_EVALUATORS[0],
-          managerRole: 'Supervisor de Área',
+          idNumber: idNum,
+          name: name,
+          role: role,
+          department: type === 'ato' ? Department.ATO : Department.VULCAN,
+          photo: `https://picsum.photos/seed/${idNum.replace(/\D/g,'') || idNum}/200/200`,
+          managerName: manager,
+          managerRole: 'Supervisor Autorizado',
           lastEvaluation: 'Pendiente',
           summary: '',
           kpis: [
@@ -152,35 +172,52 @@ const App: React.FC = () => {
           ],
           notifications: []
         });
+
+        discoveredEvaluators.add(manager);
       }
     });
 
-    if (newEmps.length > 0) setEmployees(prev => [...newEmps, ...prev]);
+    if (discoveredEvaluators.size > 0) {
+      const existingUsers = VulcanDB.getUsers();
+      let usersChanged = false;
+      const updatedUsers = [...existingUsers];
+
+      discoveredEvaluators.forEach(mgr => {
+        const alreadyExists = updatedUsers.some(u => u.username.toLowerCase().trim() === mgr.toLowerCase().trim());
+        if (!alreadyExists && mgr !== 'Casa Matriz') {
+          updatedUsers.push({
+            username: mgr,
+            role: SALARY_APPROVERS.includes(mgr) ? UserRole.Director : UserRole.Supervisor,
+            password: ''
+          });
+          usersChanged = true;
+        }
+      });
+
+      if (usersChanged) {
+        localStorage.setItem('vulcan_db_users_v1', JSON.stringify(updatedUsers));
+      }
+    }
+
+    if (newEmps.length > 0) {
+      setEmployees(prev => {
+        const existingIds = new Set(prev.map(e => e.idNumber));
+        const nonDuplicates = newEmps.filter(e => !existingIds.has(e.idNumber));
+        return [...nonDuplicates, ...prev];
+      });
+    }
   };
 
-  const handleApproveBonus = (employeeId: string) => {
-    const today = new Date().toLocaleDateString('es-ES');
-    setEvaluationsHistory(prev => prev.map(ev => {
-      if (ev.employeeId === employeeId && ev.condicionBono === BonusStatus.PendingAuth) {
-        return { ...ev, condicionBono: BonusStatus.Approved, authorizedBy: BONUS_APPROVER };
-      }
-      return ev;
-    }));
-    setEmployees(prev => prev.map(emp => {
-      if (emp.id === employeeId) {
-        const newNotification: VulcanNotification = {
-          id: Math.random().toString(36).substr(2, 9),
-          employeeId: emp.id,
-          title: "¡BONO AUTORIZADO!",
-          message: `La Dirección General (${BONUS_APPROVER}) ha autorizado su bono correspondiente.`,
-          date: today,
-          type: 'bonus',
-          read: false
-        };
-        return { ...emp, notifications: [newNotification, ...(emp.notifications || [])] };
-      }
-      return emp;
-    }));
+  const handleLogout = () => {
+    setCurrentUser(null);
+    setIsAuthenticated(false);
+    setPasswordInput('');
+    setLoginError(false);
+    setEvaluatingEmployee(null);
+    setSelectedEmployee(null);
+    setIsAddingEmployee(false);
+    setActiveTab('dashboard');
+    setShowReportsModal(false);
   };
 
   const hasBeenEvaluatedThisMonth = (employeeId: string) => {
@@ -204,34 +241,27 @@ const App: React.FC = () => {
           <h1 className="text-3xl font-black text-[#003366] tracking-tighter mb-2">VULCAN<span className="text-[#FFCC00]">HR</span></h1>
           
           {!currentUser ? (
-            <>
-              <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mb-8">Acceso a Tabla de Usuarios</p>
-              <div className="space-y-3">
+            <div className="max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+              <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mb-4">Acceso Sistema de Evaluación</p>
+              <div className="space-y-2">
                 {usersTable.map(user => (
                   <button
                     key={user.username}
                     onClick={() => setCurrentUser(user)}
-                    className={`w-full p-4 border-2 rounded-2xl text-sm font-bold flex justify-between items-center group transition-all hover:scale-[1.02] active:scale-95 ${
-                      user.role === UserRole.Director ? 'bg-[#003366] text-[#FFCC00] border-[#003366]' : 'bg-slate-50 border-slate-100 text-[#003366]'
+                    className={`w-full p-4 border-2 rounded-[24px] text-xs font-bold flex justify-between items-center group transition-all hover:scale-[1.02] active:scale-95 ${
+                      user.role === UserRole.Director ? 'bg-[#003366] text-[#FFCC00] border-[#003366] shadow-xl shadow-blue-900/10' : 'bg-slate-50 border-slate-100 text-[#003366]'
                     }`}
                   >
-                    {user.username}
-                    <span className="text-[10px] opacity-60 font-black uppercase">{user.role}</span>
+                    <span className="truncate pr-4">{user.username}</span>
+                    <span className="text-[8px] opacity-60 font-black uppercase whitespace-nowrap">{user.role}</span>
                   </button>
                 ))}
               </div>
-            </>
+            </div>
           ) : (
             <form onSubmit={handleAuth} className="animate-in slide-in-from-bottom-4">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Perfil: {currentUser.username}</p>
-              <h2 className="text-xl font-black text-[#003366] mb-6 uppercase tracking-tight">
-                {!currentUser.password ? 'Establecer Clave Personal' : 'Ingrese su Clave'}
-              </h2>
-              {!currentUser.password && (
-                <p className="text-[10px] text-slate-400 mb-6 bg-amber-50 p-4 rounded-xl border border-amber-100 font-bold uppercase">
-                  ⚠️ Cree una clave única para su usuario.
-                </p>
-              )}
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Usuario: {currentUser.username}</p>
+              <h2 className="text-xl font-black text-[#003366] mb-6 uppercase tracking-tight">Validar Acceso</h2>
               <input
                 autoFocus
                 type="password"
@@ -240,114 +270,153 @@ const App: React.FC = () => {
                 placeholder="••••••••"
                 className={`w-full p-4 bg-slate-50 border-2 rounded-2xl text-center text-lg font-black tracking-[0.5em] outline-none transition-all ${loginError ? 'border-rose-300 bg-rose-50' : 'focus:border-[#003366] border-slate-100'}`}
               />
-              {loginError && <p className="text-[10px] text-rose-500 font-black uppercase mt-4 animate-bounce">Clave Incorrecta</p>}
-              
               <div className="grid grid-cols-2 gap-4 mt-8">
-                <button 
-                  type="button"
-                  onClick={() => { setCurrentUser(null); setPasswordInput(''); setLoginError(false); }}
-                  className="py-4 text-slate-400 font-black uppercase text-[10px] tracking-widest"
-                >
-                  Regresar
-                </button>
-                <button 
-                  type="submit"
-                  className="py-4 bg-[#003366] text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl shadow-blue-900/20"
-                >
-                  {!currentUser.password ? 'Guardar Clave' : 'Acceder'}
-                </button>
+                <button type="button" onClick={() => { setCurrentUser(null); setPasswordInput(''); }} className="py-4 text-slate-400 font-black uppercase text-[10px]">Atrás</button>
+                <button type="submit" className="py-4 bg-[#003366] text-white rounded-2xl font-black uppercase text-[10px] shadow-xl shadow-blue-900/20">Entrar</button>
               </div>
             </form>
           )}
-          <p className="mt-8 text-[9px] text-slate-300 font-bold uppercase tracking-widest">Base de Datos de Usuarios Activa</p>
         </div>
       </div>
     );
   }
 
   const renderContent = () => {
-    if (isAddingEmployee) return <div className="py-8"><AddEmployeeForm onAdd={(data) => {
-      const baseKpis: KPI[] = employees.length > 0 ? employees[0].kpis : [
-        { id: 'k1', name: 'Productividad', score: 0, weight: 40 },
-        { id: 'k2', name: 'Calidad Operativa', score: 0, weight: 30 },
-        { id: 'k3', name: 'Seguridad SIHOA', score: 0, weight: 30 }
-      ];
+    if (isAddingEmployee && !isDirector) return <div className="py-8"><AddEmployeeForm onAdd={(data) => {
       const newEmp: Employee = { 
         ...data, 
         id: Math.random().toString(36).substr(2, 9), 
-        kpis: baseKpis.map(k => ({...k, score: 0})), 
-        lastEvaluation: 'Pendiente', 
-        summary: '', 
-        notifications: [] 
+        kpis: [{ id: 'k1', name: 'Productividad', score: 0, weight: 40 }, { id: 'k2', name: 'Calidad', score: 0, weight: 30 }, { id: 'k3', name: 'Seguridad', score: 0, weight: 30 }], 
+        lastEvaluation: 'Pendiente', summary: '', notifications: [] 
       };
       setEmployees(prev => [newEmp, ...prev]);
       setIsAddingEmployee(false);
     }} onCancel={() => setIsAddingEmployee(false)} /></div>;
 
-    if (evaluatingEmployee) return <div className="py-8"><EvaluationForm employee={evaluatingEmployee} evaluatorName={currentUser.username} onClose={() => { setEvaluatingEmployee(null); setActiveTab('dashboard'); }} onSave={handleSaveEvaluation} /></div>;
-    if (selectedEmployee) return <EmployeeDetails employee={selectedEmployee} evaluations={evaluationsHistory} onBack={() => setSelectedEmployee(null)} />;
+    if (evaluatingEmployee && !isDirector) return <div className="py-8"><EvaluationForm employee={evaluatingEmployee} evaluatorName={currentUser.username} onClose={() => setEvaluatingEmployee(null)} onSave={handleSaveEvaluation} /></div>;
+    if (selectedEmployee) return <EmployeeDetails employee={selectedEmployee} evaluations={evaluationsHistory} onBack={() => setSelectedEmployee(null)} currentUserRole={currentUser?.role} />;
 
     switch (activeTab) {
       case 'dashboard': return <Dashboard employees={filteredEmployees} />;
-      case 'employees': return <EmployeeList employees={filteredEmployees} onSelect={setSelectedEmployee} onAddNew={() => setIsAddingEmployee(true)} onBulkAdd={handleBulkAdd} />;
+      case 'employees': return <EmployeeList employees={filteredEmployees} onSelect={setSelectedEmployee} onAddNew={() => setIsAddingEmployee(true)} onBulkAdd={handleBulkAdd} isReadOnly={isDirector} />;
       case 'database': return <DatabaseConsole />;
       case 'evaluations':
         if (isDirector) {
           const pending = evaluationsHistory.filter((ev: FullEvaluation) => ev.condicionBono === BonusStatus.PendingAuth);
           return (
-            <div className="space-y-10">
-              <div className="bg-[#001a33] rounded-[40px] p-10 text-white shadow-2xl border-b-8 border-[#FFCC00]">
-                 <h3 className="text-3xl font-black tracking-tight uppercase">Control de Bonos</h3>
-                 <p className="text-[#FFCC00] mt-2 text-sm font-bold">Autorice los beneficios por alto desempeño técnico.</p>
-              </div>
-              <div className="bg-white rounded-[40px] p-10 border border-slate-100 shadow-sm">
-                <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-8">Pendientes ({pending.length})</h4>
-                {pending.length === 0 ? <p className="text-center py-10 text-slate-300 font-bold uppercase text-xs">No hay bonos pendientes.</p> : (
-                  <div className="space-y-4">
-                    {pending.map(ev => {
-                      const emp = employees.find(e => e.id === ev.employeeId);
-                      return (
-                        <div key={ev.employeeId} className="flex items-center justify-between p-6 bg-slate-50 rounded-3xl border border-slate-100">
-                          <div className="flex items-center space-x-4">
-                             <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center font-black text-indigo-600">{(ev.promedioFinal * 20).toFixed(0)}%</div>
-                             <div><p className="font-black text-slate-800 uppercase text-sm">{emp?.name}</p></div>
-                          </div>
-                          <button onClick={() => handleApproveBonus(ev.employeeId)} className="bg-[#003366] text-white px-8 py-3 rounded-2xl font-black uppercase text-[10px]">Autorizar Bono</button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
+             <div className="space-y-6">
+               <div className="bg-[#001a33] p-10 rounded-[40px] text-white shadow-xl border-b-8 border-[#FFCC00]">
+                 <h3 className="text-3xl font-black uppercase">Panel de Aprobación de Beneficios</h3>
+                 <p className="text-[#FFCC00] text-sm font-bold mt-2">Personal con desempeño excepcional esperando su autorización.</p>
+               </div>
+               {pending.length === 0 ? (
+                 <div className="bg-white rounded-3xl p-20 text-center border-2 border-dashed border-slate-100">
+                    <p className="text-slate-300 font-black uppercase text-xs tracking-widest">No hay firmas pendientes para este ciclo</p>
+                 </div>
+               ) : (
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                   {pending.map(ev => {
+                     const emp = employees.find(e => e.id === ev.employeeId);
+                     const isEmpVulcan = emp?.department === Department.VULCAN;
+                     
+                     return (
+                       <div key={`${ev.employeeId}-${ev.mes}`} className="bg-white p-8 rounded-[32px] border-2 border-slate-50 shadow-sm space-y-4">
+                         <div className="flex justify-between items-start">
+                            <div className="flex items-center gap-4">
+                               <img src={emp?.photo} className="w-12 h-12 rounded-xl grayscale" />
+                               <div>
+                                  <p className="font-black text-[#003366] uppercase text-sm">{emp?.name}</p>
+                                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{emp?.department} • {ev.mes} {ev.año}</p>
+                               </div>
+                            </div>
+                            <div className="text-right">
+                               <p className="text-2xl font-black text-indigo-600">{(ev.promedioFinal * 20).toFixed(1)}%</p>
+                               <p className="text-[8px] font-black uppercase text-slate-300">Puntaje</p>
+                            </div>
+                         </div>
+                         
+                         {isEmpVulcan && (
+                            <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100 flex justify-between items-center">
+                               <span className="text-[10px] font-black text-emerald-800 uppercase">Incremento VULCAN:</span>
+                               {isSalaryApprover ? (
+                                  <input 
+                                    className="bg-white border-2 border-emerald-300 px-3 py-1 rounded-lg text-xs font-black text-emerald-600 w-24 text-center"
+                                    value={ev.incrementoSalarial || "0%"}
+                                    onChange={(e) => {
+                                      const newVal = e.target.value;
+                                      setEvaluationsHistory(prev => prev.map(item => 
+                                        item === ev ? { ...item, incrementoSalarial: newVal } : item
+                                      ));
+                                    }}
+                                  />
+                               ) : (
+                                  <span className="text-lg font-black text-emerald-600">{ev.incrementoSalarial || "0%"}</span>
+                               )}
+                            </div>
+                         )}
+
+                         <div className="p-4 bg-slate-50 rounded-2xl italic text-[10px] text-slate-600 border border-slate-100">
+                            "{ev.observaciones || 'Sin comentarios adicionales.'}"
+                         </div>
+                         
+                         <div className="grid grid-cols-3 gap-3">
+                            <button 
+                              onClick={() => handleApproveBonus(ev.employeeId, ev.mes, ev.año, BonusStatus.Approved, ev.incrementoSalarial)}
+                              className="bg-emerald-500 text-white py-3 rounded-xl text-[9px] font-black uppercase hover:bg-emerald-600 transition-colors shadow-lg shadow-emerald-500/10"
+                            >
+                              Aprobar
+                            </button>
+                            <button 
+                              onClick={() => handleApproveBonus(ev.employeeId, ev.mes, ev.año, BonusStatus.Conditioned, ev.incrementoSalarial)}
+                              className="bg-amber-500 text-white py-3 rounded-xl text-[9px] font-black uppercase hover:bg-amber-600 transition-colors shadow-lg shadow-amber-500/10"
+                            >
+                              Condicionar
+                            </button>
+                            <button 
+                              onClick={() => handleApproveBonus(ev.employeeId, ev.mes, ev.año, BonusStatus.NotApproved, ev.incrementoSalarial)}
+                              className="bg-rose-500 text-white py-3 rounded-xl text-[9px] font-black uppercase hover:bg-rose-600 transition-colors shadow-lg shadow-rose-500/10"
+                            >
+                              Denegar
+                            </button>
+                         </div>
+                       </div>
+                     );
+                   })}
+                 </div>
+               )}
+             </div>
           );
         }
         
-        const groups: Record<string, Employee[]> = {};
+        const groups = { ATO: [], VULCAN: [] };
         filteredEmployees.forEach(emp => {
-          if (!groups[emp.department]) groups[emp.department] = [];
-          groups[emp.department].push(emp);
+          if (emp.department === Department.ATO) (groups.ATO as Employee[]).push(emp);
+          else (groups.VULCAN as Employee[]).push(emp);
         });
 
         return (
           <div className="space-y-10">
-            {Object.entries(groups).map(([dept, deptEmployees]) => (
-              <div key={dept} className="space-y-4">
-                <h4 className="text-xl font-black text-slate-800 uppercase px-4">Departamento: {dept}</h4>
+            {Object.entries(groups).map(([groupName, groupEmps]) => groupEmps.length > 0 && (
+              <div key={groupName} className="space-y-4">
+                <div className="bg-white px-8 py-4 rounded-[32px] border-l-8 border-[#003366] shadow-sm flex items-center justify-between">
+                   <h4 className="text-xl font-black text-slate-800 uppercase tracking-tight">UNIVERSO: PERSONAL {groupName}</h4>
+                   <span className="bg-slate-50 px-4 py-1.5 rounded-full text-[10px] font-black text-slate-400 uppercase">{groupEmps.length} COLABORADORES</span>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {deptEmployees.map(emp => {
+                  {groupEmps.map(emp => {
                     const evaluated = hasBeenEvaluatedThisMonth(emp.id);
                     return (
-                      <div key={emp.id} className={`bg-white rounded-3xl p-6 border-2 transition-all ${evaluated ? 'border-emerald-100 opacity-60' : 'border-slate-50 hover:border-[#003366]'}`}>
+                      <div key={emp.id} className={`bg-white rounded-[32px] p-6 border-2 transition-all ${evaluated ? 'opacity-50 border-emerald-100' : 'border-slate-50 hover:border-[#003366]'}`}>
                         <div className="flex justify-between items-start mb-4">
-                          <img src={emp.photo} className="w-12 h-12 rounded-full grayscale" />
-                          <span className={`text-[9px] font-black px-3 py-1 rounded-full uppercase ${evaluated ? 'text-emerald-600 bg-emerald-50' : 'text-amber-600 bg-amber-50'}`}>
-                            {evaluated ? 'Evaluado ✓' : 'Pendiente'}
-                          </span>
+                           <img src={emp.photo} className="w-14 h-14 rounded-2xl grayscale" />
+                           <span className={`text-[8px] font-black px-4 py-2 rounded-xl uppercase ${evaluated ? 'text-emerald-600 bg-emerald-50' : 'text-amber-600 bg-amber-50'}`}>
+                              {evaluated ? 'Evaluado ✓' : 'Pendiente'}
+                           </span>
                         </div>
-                        <h5 className="font-bold text-slate-800 uppercase text-sm truncate">{emp.name}</h5>
-                        <button disabled={evaluated} onClick={() => setEvaluatingEmployee(emp)} className={`w-full mt-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest ${evaluated ? 'bg-slate-100 text-slate-400' : 'bg-[#003366] text-white'}`}>
-                          {evaluated ? 'Reporte Listo' : 'Iniciar Evaluación'}
+                        <h5 className="font-black text-slate-800 uppercase text-xs truncate leading-none mb-1">{emp.name}</h5>
+                        <p className="text-[9px] text-slate-400 font-bold uppercase truncate">{emp.role}</p>
+                        <button disabled={evaluated} onClick={() => setEvaluatingEmployee(emp)} className={`w-full mt-6 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${evaluated ? 'bg-slate-100 text-slate-300' : 'bg-[#003366] text-white shadow-xl shadow-blue-900/10'}`}>
+                           {evaluated ? 'Periodo Completo' : 'Evaluar Colaborador'}
                         </button>
                       </div>
                     );
@@ -363,15 +432,13 @@ const App: React.FC = () => {
 
   return (
     <Layout 
-      activeTab={activeTab} 
-      setActiveTab={setActiveTab} 
+      activeTab={activeTab} setActiveTab={setActiveTab} 
       onDownloadReports={() => setShowReportsModal(true)} 
-      evaluatorName={currentUser.username} 
-      onChangeEvaluator={() => { setCurrentUser(null); setIsAuthenticated(false); setPasswordInput(''); }}
+      evaluatorName={currentUser.username} onChangeEvaluator={handleLogout}
       isSyncing={isSyncing}
     >
       {renderContent()}
-      {showReportsModal && <MonthlyReportModal evaluations={filteredEvaluationsForReport} employees={filteredEmployees} onClose={() => setShowReportsModal(false)} />}
+      {showReportsModal && <MonthlyReportModal evaluations={filteredEvaluationsForReport} employees={employees} onClose={() => setShowReportsModal(false)} currentUserRole={currentUser?.role} />}
     </Layout>
   );
 };
