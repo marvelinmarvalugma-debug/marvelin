@@ -7,47 +7,46 @@ import { VulcanDB } from '../services/storageService';
 interface EvaluationFormProps {
   employee: Employee;
   evaluatorName: string;
+  initialData?: FullEvaluation;
   onClose: () => void;
   onSave: (evaluation: FullEvaluation) => void;
 }
 
 const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
 
-export default function EvaluationForm({ employee, evaluatorName, onClose, onSave }: EvaluationFormProps) {
+export default function EvaluationForm({ employee, evaluatorName, initialData, onClose, onSave }: EvaluationFormProps) {
   const [step, setStep] = useState(1);
-  const [campo, setCampo] = useState('CARIÑA');
-  const [mes, setMes] = useState(new Date().toLocaleString('es-ES', { month: 'long' }).toLowerCase());
-  const [anio, setAnio] = useState(new Date().getFullYear().toString());
+  const [campo, setCampo] = useState(initialData?.campo || 'CARIÑA');
+  const [mes, setMes] = useState(initialData?.mes || new Date().toLocaleString('es-ES', { month: 'long' }).toLowerCase());
+  const [anio, setAnio] = useState(initialData?.año || new Date().getFullYear().toString());
 
   const user = useMemo(() => VulcanDB.getUser(evaluatorName), [evaluatorName]);
   const isDirector = user?.role === UserRole.Director;
   
-  // Verificación de gerentes autorizados (Jin, Naim, Cuya)
   const isSalaryApprover = useMemo(() => {
     return SALARY_APPROVERS.some(name => evaluatorName.toLowerCase().trim() === name.toLowerCase().trim());
   }, [evaluatorName]);
 
   const isVulcan = employee.department === Department.VULCAN;
 
-  const initialCriteria = useMemo(() => {
-    const baseCriteria = isVulcan ? VULCAN_CRITERIA : ATO_CRITERIA;
-    return baseCriteria.map(c => ({ ...c, score: 0 }));
-  }, [isVulcan]);
+  const [criteria, setCriteria] = useState<TechnicalCriterion[]>([]);
+  const [observaciones, setObservaciones] = useState(initialData?.observaciones || '');
+  const [manualIncrement, setManualIncrement] = useState(initialData?.incrementoSalarial || '');
 
-  const [criteria, setCriteria] = useState<TechnicalCriterion[]>(initialCriteria);
-  const [observaciones, setObservaciones] = useState('');
-  
-  const [mejoraAreas, setMejoraAreas] = useState('');
-  const [objetivosDesarrollo, setObjetivosDesarrollo] = useState('');
-  const [capacitacionRec, setCapacitacionRec] = useState('');
-  
-  const [bonusStatus, setBonusStatus] = useState<BonusStatus>(BonusStatus.PendingAuth);
-  
+  // Inicializar criterios
+  useEffect(() => {
+    if (initialData) {
+      setCriteria(initialData.criteria);
+    } else {
+      const baseCriteria = isVulcan ? VULCAN_CRITERIA : ATO_CRITERIA;
+      setCriteria(baseCriteria.map(c => ({ ...c, score: 0 })));
+    }
+  }, [isVulcan, initialData]);
+
   const totalPuntos = criteria.reduce((acc, curr) => acc + curr.score, 0);
   const promedioFinalNum = totalPuntos > 0 ? parseFloat((totalPuntos / criteria.length).toFixed(2)) : 0;
   const porcentajeDesempeño = (promedioFinalNum / 5) * 100;
 
-  // Lógica de incremento VULCAN exacta: 80-87=10%, 88-97=15%, 98-100=20% o más
   const suggestedIncrement = useMemo(() => {
     if (!isVulcan) return "0%";
     if (porcentajeDesempeño >= 98) return "20% o más";
@@ -55,8 +54,6 @@ export default function EvaluationForm({ employee, evaluatorName, onClose, onSav
     if (porcentajeDesempeño >= 80) return "10%";
     return "0%";
   }, [isVulcan, porcentajeDesempeño]);
-
-  const [manualIncrement, setManualIncrement] = useState('');
 
   const handleScoreChange = (id: string, score: number) => {
     setCriteria(prev => prev.map(c => c.id === id ? { ...c, score } : c));
@@ -72,48 +69,48 @@ export default function EvaluationForm({ employee, evaluatorName, onClose, onSav
   }, [isVulcan, criteria]);
 
   const processEvaluation = () => {
-    let finalBonusStatus = bonusStatus;
+    let finalBonusStatus = initialData?.condicionBono || BonusStatus.PendingAuth;
     
-    // REGLA ATO: Solo 100% -> Jacquelin para Bono
-    if (!isVulcan) {
-      if (porcentajeDesempeño >= 100) {
-        finalBonusStatus = BonusStatus.PendingAuth;
-      } else {
+    // Si no es edición o si el puntaje cambió drásticamente, recalculamos status sugerido
+    if (!initialData) {
+      if (!isVulcan) {
+        if (porcentajeDesempeño < 100) {
+          finalBonusStatus = BonusStatus.NotApproved;
+        }
+      } else if (porcentajeDesempeño < 80) {
         finalBonusStatus = BonusStatus.NotApproved;
       }
-    } 
-    // REGLA VULCAN: Si tiene incremento sugerido (>=80%), queda pendiente de validación por gerencia
-    else if (porcentajeDesempeño >= 80) {
-      finalBonusStatus = BonusStatus.PendingAuth;
-    } else {
-      finalBonusStatus = BonusStatus.NotApproved;
     }
 
     const evaluationData: FullEvaluation = {
+      id: initialData?.id, // Mantenemos el ID si existe
       employeeId: employee.id,
-      campo, mes, año: anio, evaluador: evaluatorName, 
-      cargoEvaluador: "Supervisor / Evaluador Autorizado",
+      campo, mes, año: anio, evaluador: initialData?.evaluador || evaluatorName, 
+      cargoEvaluador: initialData?.cargoEvaluador || (isDirector ? "Dirección General" : "Supervisor / Evaluador"),
       areaDesempeño: isVulcan ? 'Administrativa' : 'Operativa', 
       criteria, observaciones,
       condicionBono: finalBonusStatus,
-      recomendacionSalarial: capacitacionRec || "Sugerida según puntaje",
+      recomendacionSalarial: "Sugerida según puntaje",
       incrementoSalarial: isVulcan ? (manualIncrement || suggestedIncrement) : undefined,
       totalPuntos, promedioFinal: promedioFinalNum,
-      date: new Date().toISOString().split('T')[0]
+      date: initialData?.date || new Date().toISOString().split('T')[0],
+      authorizedBy: initialData?.authorizedBy
     };
+    
     onSave(evaluationData);
     setStep(4);
   };
 
   return (
-    <div className="bg-white rounded-[40px] shadow-2xl border border-slate-100 overflow-hidden max-w-5xl mx-auto my-4 animate-in fade-in duration-500 print:shadow-none print:border-none print:my-0 print:rounded-none">
+    <div className="bg-white rounded-[40px] shadow-2xl border border-slate-100 overflow-hidden max-w-5xl mx-auto my-4 animate-in fade-in duration-500 print:shadow-none print:border-none print:my-0 print:rounded-none print:w-full">
       
+      {/* Header Formulario */}
       <div className="bg-[#003366] p-8 text-white border-b-8 border-[#FFCC00] print:hidden flex justify-between items-center">
         <div className="flex items-center gap-6">
           <div className="bg-white p-3 rounded-xl font-black text-[#003366] text-xl shadow-lg">VULCAN</div>
           <div>
             <h2 className="text-xl font-black uppercase tracking-tighter">
-              Evaluación {employee.department}
+              {initialData ? 'Corrigiendo' : 'Formato de'} Evaluación {employee.department}
             </h2>
             <p className="text-[10px] font-bold uppercase text-[#FFCC00] tracking-[0.2em]">{employee.name}</p>
           </div>
@@ -138,16 +135,20 @@ export default function EvaluationForm({ employee, evaluatorName, onClose, onSav
                  </div>
                  <div className="space-y-2">
                    <label className="text-[10px] font-black text-[#003366] uppercase tracking-widest">Año</label>
-                   <input value={anio} disabled className="w-full p-4 bg-slate-100 border-2 border-slate-200 rounded-2xl font-black text-center" />
+                   <input value={anio} onChange={e => setAnio(e.target.value)} disabled={!isDirector} className="w-full p-4 bg-slate-100 border-2 border-slate-200 rounded-2xl font-black text-center" />
                  </div>
                </div>
             </div>
-            <button onClick={() => setStep(2)} className="w-full py-5 bg-[#003366] text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl">Siguiente: Matriz →</button>
+            <button onClick={() => setStep(2)} className="w-full py-5 bg-[#003366] text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl">Continuar a Matriz Técnica →</button>
           </div>
         )}
 
         {step === 2 && (
-          <div className="space-y-8">
+          <div className="space-y-8 animate-in fade-in">
+            <div className="bg-amber-50 p-4 rounded-2xl border border-amber-100 text-[10px] text-amber-800 font-bold uppercase text-center mb-4">
+               Califique cada criterio de 1 (Deficiente) a 5 (Sobresaliente)
+            </div>
+            
             {isVulcan ? (
               <div className="space-y-12">
                 {vulcanGroups.map((group, idx) => (
@@ -161,7 +162,7 @@ export default function EvaluationForm({ employee, evaluatorName, onClose, onSav
                           {group.items.map(c => (
                             <tr key={c.id} className="hover:bg-slate-50">
                               <td className="px-8 py-4 w-2/3">
-                                <p className="font-black text-[#003366] uppercase text-[11px]">{c.name}</p>
+                                <p className="font-black text-[#003366] uppercase text-[11px] mb-0.5">{c.name}</p>
                                 <p className="text-[9px] text-slate-400 italic leading-tight">{c.description}</p>
                               </td>
                               <td className="px-8 py-4">
@@ -170,8 +171,8 @@ export default function EvaluationForm({ employee, evaluatorName, onClose, onSav
                                     <button 
                                       key={v}
                                       onClick={() => handleScoreChange(c.id, v)}
-                                      className={`w-8 h-8 rounded-lg font-black text-[9px] border ${
-                                        c.score === v ? 'bg-[#FFCC00] border-[#FFCC00] text-[#003366]' : 'bg-white border-slate-100 text-slate-300'
+                                      className={`w-8 h-8 rounded-lg font-black text-[9px] transition-all border ${
+                                        c.score === v ? 'bg-[#FFCC00] border-[#FFCC00] text-[#003366] scale-110 shadow-md' : 'bg-white border-slate-100 text-slate-300'
                                       }`}
                                     >
                                       {v}
@@ -190,17 +191,17 @@ export default function EvaluationForm({ employee, evaluatorName, onClose, onSav
             ) : (
               <div className="overflow-hidden border-2 border-slate-100 rounded-[32px]">
                 <table className="w-full text-left">
-                  <thead className="bg-[#003366] text-white text-[10px] font-black uppercase">
+                  <thead className="bg-[#003366] text-white">
                     <tr>
-                      <th className="px-8 py-5">Matriz ATO</th>
-                      <th className="px-8 py-5 text-center">Score (1-5)</th>
+                      <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest">Matriz Técnica ATO</th>
+                      <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-center">Puntaje</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {criteria.map(c => (
-                      <tr key={c.id} className="hover:bg-slate-50">
+                      <tr key={c.id} className="hover:bg-slate-50 transition-colors">
                         <td className="px-8 py-5">
-                          <p className="font-black text-[#003366] uppercase text-xs">{c.name}</p>
+                          <p className="font-black text-[#003366] uppercase text-xs mb-1">{c.name}</p>
                           <p className="text-[10px] text-slate-400 italic">{c.description}</p>
                         </td>
                         <td className="px-8 py-5">
@@ -209,8 +210,8 @@ export default function EvaluationForm({ employee, evaluatorName, onClose, onSav
                               <button 
                                 key={v}
                                 onClick={() => handleScoreChange(c.id, v)}
-                                className={`w-9 h-9 rounded-xl font-black text-[10px] border-2 ${
-                                  c.score === v ? 'bg-[#FFCC00] border-[#FFCC00] text-[#003366]' : 'bg-white border-slate-100 text-slate-300'
+                                className={`w-9 h-9 rounded-xl font-black text-[10px] transition-all border-2 ${
+                                  c.score === v ? 'bg-[#FFCC00] border-[#FFCC00] text-[#003366] shadow-lg scale-110' : 'bg-white border-slate-100 text-slate-300'
                                 }`}
                               >
                                 {v}
@@ -225,113 +226,169 @@ export default function EvaluationForm({ employee, evaluatorName, onClose, onSav
               </div>
             )}
 
-            <div className="flex justify-between items-center bg-[#001a33] p-8 rounded-[32px] text-white">
-              <div>
-                <p className="text-[8px] font-black uppercase text-slate-400">Desempeño Final</p>
-                <p className="text-3xl font-black text-[#FFCC00]">{porcentajeDesempeño.toFixed(1)}%</p>
+            <div className="flex justify-between items-center bg-[#001a33] p-8 rounded-[32px] text-white shadow-xl">
+              <div className="flex items-center gap-8">
+                 <div className="text-center">
+                    <p className="text-[8px] font-black uppercase text-slate-400 mb-1">Promedio</p>
+                    <p className="text-2xl font-black text-[#FFCC00]">{promedioFinalNum}</p>
+                 </div>
+                 <div className="text-center border-l border-white/10 pl-8">
+                    <p className="text-[8px] font-black uppercase text-slate-400 mb-1">Eficacia Total</p>
+                    <p className="text-2xl font-black text-[#FFCC00]">{porcentajeDesempeño.toFixed(1)}%</p>
+                 </div>
               </div>
               <button 
                 disabled={criteria.some(c => c.score === 0)}
                 onClick={() => setStep(3)} 
-                className={`px-12 py-4 rounded-xl font-black uppercase text-[10px] transition-all ${
-                  criteria.some(c => c.score === 0) ? 'bg-white/5 text-white/10' : 'bg-[#FFCC00] text-[#003366]'
+                className={`px-12 py-4 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${
+                  criteria.some(c => c.score === 0) ? 'bg-white/5 text-white/10' : 'bg-[#FFCC00] text-[#003366] shadow-xl'
                 }`}
               >
-                Continuar →
+                Continuar a Resultados →
               </button>
             </div>
           </div>
         )}
 
         {step === 3 && (
-          <div className="space-y-8">
-             {isVulcan && (
-               <div className="bg-emerald-50 border-2 border-emerald-100 p-8 rounded-[32px] space-y-4">
-                  <h4 className="text-[10px] font-black text-emerald-900 uppercase tracking-widest">Escala Salarial VULCAN</h4>
-                  <div className="flex items-center gap-10">
-                     <div>
-                        <p className="text-[9px] font-bold text-slate-500 uppercase">Incremento Automático:</p>
-                        <p className="text-3xl font-black text-emerald-600">{suggestedIncrement}</p>
-                     </div>
-                     {isSalaryApprover && (
-                        <div className="flex-1">
-                           <label className="text-[9px] font-black text-emerald-800 uppercase block mb-1">Ajuste Manual de Gerencia:</label>
-                           <input 
-                             type="text" 
-                             value={manualIncrement} 
-                             onChange={e => setManualIncrement(e.target.value)}
-                             className="w-full p-4 bg-white border-2 border-emerald-200 rounded-2xl text-xs font-black text-emerald-600"
-                             placeholder="Ej: 20% ó más"
-                           />
-                        </div>
-                     )}
-                  </div>
-                  <div className="text-[8px] text-emerald-700/60 font-bold grid grid-cols-3 gap-2 border-t border-emerald-100 pt-4">
-                     <span>80%-87%: 10%</span>
-                     <span>88%-97%: 15%</span>
-                     <span>98%-100%: 20% o más</span>
-                  </div>
-               </div>
-             )}
-
+          <div className="space-y-8 animate-in slide-in-from-bottom-4">
              <div className="space-y-3">
-                <h4 className="text-[10px] font-black text-[#003366] uppercase">Comentarios Finales</h4>
+                <h4 className="text-[10px] font-black text-[#003366] uppercase tracking-widest">Observaciones y Comentarios Generales</h4>
                 <textarea 
                   value={observaciones} 
                   onChange={e => setObservaciones(e.target.value)}
-                  className="w-full h-32 p-6 bg-slate-50 border-2 border-slate-100 rounded-[32px] outline-none text-sm"
-                  placeholder="Observaciones del evaluador..."
+                  className="w-full h-32 p-6 bg-slate-50 border-2 border-slate-100 rounded-[32px] outline-none focus:border-[#003366] text-sm"
+                  placeholder="Describa el desempeño general observado en el periodo..."
                 />
              </div>
 
              <div className="flex justify-end gap-3 pt-6">
-                <button onClick={() => setStep(2)} className="px-8 py-4 font-black uppercase text-[10px] text-slate-400">Volver</button>
-                <button onClick={processEvaluation} className="bg-[#003366] text-white px-16 py-5 rounded-2xl font-black uppercase text-[10px] shadow-2xl">Cerrar Evaluación</button>
+                <button onClick={() => setStep(2)} className="px-8 py-4 font-black uppercase text-[10px] text-slate-400">Volver a Matriz</button>
+                <button onClick={processEvaluation} className="bg-[#003366] text-white px-16 py-5 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] shadow-2xl">
+                  {initialData ? 'Guardar Cambios' : 'Finalizar Registro'} y Generar Acta
+                </button>
              </div>
           </div>
         )}
 
         {step === 4 && (
-          <div className="py-10">
-             <div className="max-w-4xl mx-auto bg-white p-12 border border-slate-200">
+          <div className="animate-in zoom-in space-y-10 py-10 print:py-0">
+             {/* VISTA PREVIA PDF (ACTA OFICIAL) */}
+             <div className="max-w-4xl mx-auto bg-white p-12 border border-slate-300 shadow-sm print:shadow-none print:border-none print:p-0 print:w-full print:max-w-full overflow-hidden">
+                
+                {/* Cabecera Oficial */}
                 <div className="flex justify-between items-start border-b-2 border-slate-800 pb-4 mb-8">
-                   <h1 className="text-3xl font-black text-[#003366]">Vulcan</h1>
-                   <div className="text-right text-[10px] font-black uppercase">
-                      <p>EVALUACIÓN DE DESEMPEÑO</p>
-                      <p className="text-[#003366]">PERSONAL {employee.department}</p>
+                   <div className="flex gap-4 items-center">
+                     <div className="w-12 h-12 bg-[#003366] text-white flex items-center justify-center font-black text-xs rounded-lg">VULCAN</div>
+                     <div>
+                        <h1 className="text-2xl font-black text-[#003366] tracking-tighter">Vulcan</h1>
+                        <p className="text-[7px] font-black text-slate-500 tracking-widest uppercase">VULCAN ENERGY TECHNOLOGY VENEZOLANA, C.A.</p>
+                     </div>
+                   </div>
+                   <div className="text-right text-[9px] font-black text-slate-800 leading-tight">
+                      <p className="bg-slate-100 px-2 py-1 mb-1 border border-slate-200">ACTA DE EVALUACIÓN INDIVIDUAL</p>
+                      <p className="text-[#003366] font-black">NIVEL: PERSONAL {employee.department}</p>
                    </div>
                 </div>
 
-                <div className="grid grid-cols-2 border border-slate-800 text-[10px] p-4 mb-8">
-                   <p><span className="font-black uppercase">Empleado:</span> {employee.name}</p>
-                   <p><span className="font-black uppercase">Cargo:</span> {employee.role}</p>
-                   <p><span className="font-black uppercase">Fecha:</span> {new Date().toLocaleDateString()}</p>
-                   <p><span className="font-black uppercase">Evaluador:</span> {evaluatorName}</p>
+                {/* Info General en Tabla */}
+                <table className="w-full border-collapse border border-slate-800 text-[10px] mb-8">
+                  <tbody>
+                    <tr>
+                      <td className="border border-slate-800 p-2 bg-slate-50 font-black w-1/4">TRABAJADOR</td>
+                      <td className="border border-slate-800 p-2 w-1/4 uppercase">{employee.name}</td>
+                      <td className="border border-slate-800 p-2 bg-slate-50 font-black w-1/4">CÉDULA</td>
+                      <td className="border border-slate-800 p-2 w-1/4">V-{employee.idNumber}</td>
+                    </tr>
+                    <tr>
+                      <td className="border border-slate-800 p-2 bg-slate-50 font-black">CARGO</td>
+                      <td className="border border-slate-800 p-2 uppercase">{employee.role}</td>
+                      <td className="border border-slate-800 p-2 bg-slate-50 font-black">CAMPO / BASE</td>
+                      <td className="border border-slate-800 p-2 uppercase">{campo}</td>
+                    </tr>
+                    <tr>
+                      <td className="border border-slate-800 p-2 bg-slate-50 font-black">MES EVALUADO</td>
+                      <td className="border border-slate-800 p-2 uppercase font-black">{mes} {anio}</td>
+                      <td className="border border-slate-800 p-2 bg-slate-50 font-black">FECHA DE REPORTE</td>
+                      <td className="border border-slate-800 p-2 uppercase">{new Date().toLocaleDateString('es-ES')}</td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                {/* MATRIZ DETALLADA (CADA ITEM EVALUADO) */}
+                <div className="mb-8">
+                  <h4 className="text-[10px] font-black uppercase mb-3 bg-slate-800 text-white p-2 text-center tracking-widest">I. MATRIZ TÉCNICA Y OPERACIONAL DE RENDIMIENTO</h4>
+                  <table className="w-full border-collapse border border-slate-800 text-[9px]">
+                    <thead className="bg-slate-100 font-black">
+                      <tr>
+                        <th className="border border-slate-800 p-2 text-left uppercase w-2/5">Indicador / Competencia</th>
+                        <th className="border border-slate-800 p-2 text-left uppercase w-2/5">Descripción de Referencia Técnica</th>
+                        <th className="border border-slate-800 p-2 text-center uppercase">Puntaje (1-5)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {criteria.map((c, idx) => (
+                        <tr key={c.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
+                          <td className="border border-slate-800 p-2 font-black uppercase text-[8px]">{c.name}</td>
+                          <td className="border border-slate-800 p-2 text-slate-500 italic leading-none text-[8px]">{c.description}</td>
+                          <td className="border border-slate-800 p-2 text-center font-black text-xs">{c.score}</td>
+                        </tr>
+                      ))}
+                      <tr className="bg-slate-200 font-black">
+                        <td colSpan={2} className="border border-slate-800 p-3 text-right uppercase">Calificación Final del Periodo (Promedio ponderado / Eficacia):</td>
+                        <td className="border border-slate-800 p-3 text-center text-sm text-[#003366]">{totalPuntos} pts / {porcentajeDesempeño.toFixed(1)}%</td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
 
-                {isVulcan && (
-                   <div className="mb-8 p-4 bg-emerald-50 border border-emerald-800">
-                      <p className="text-[10px] font-black uppercase text-emerald-900">Incremento Salarial Asignado: <span className="text-lg ml-2">{manualIncrement || suggestedIncrement}</span></p>
+                {/* Comentarios */}
+                <div className="mb-8 border border-slate-800">
+                   <div className="bg-slate-50 p-2 font-black border-b border-slate-800 text-[10px] uppercase">II. Observaciones y Recomendaciones del Supervisor</div>
+                   <div className="p-4 min-h-[80px] text-[10px] italic leading-tight text-slate-700">
+                      {observaciones || "El trabajador mantiene un nivel de cumplimiento satisfactorio con respecto a los estándares de la organización en el periodo indicado."}
                    </div>
-                )}
-
-                <div className="mt-8 text-right font-black text-xl">
-                   PROMEDIO FINAL: {porcentajeDesempeño.toFixed(1)}%
                 </div>
 
+                {/* Firmas */}
                 <div className="grid grid-cols-2 gap-20 text-center mt-20">
-                   <div className="border-t border-black pt-2 font-black text-[9px] uppercase">Firma Evaluador</div>
-                   <div className="border-t border-black pt-2 font-black text-[9px] uppercase">Firma Trabajador</div>
+                   <div className="space-y-1">
+                      <div className="border-t border-slate-800 pt-2 mx-auto w-3/4">
+                        <p className="text-[9px] font-black uppercase">{initialData?.evaluador || evaluatorName}</p>
+                        <p className="text-[7px] text-slate-500 uppercase">Supervisor / Evaluador Autorizado</p>
+                        <p className="text-[7px] text-slate-400 font-bold uppercase mt-1">Sello Vulcan HR</p>
+                      </div>
+                   </div>
+                   <div className="space-y-1">
+                      <div className="border-t border-slate-800 pt-2 mx-auto w-3/4">
+                        <p className="text-[9px] font-black uppercase">{employee.name}</p>
+                        <p className="text-[7px] text-slate-500 uppercase">Trabajador Evaluado</p>
+                        <p className="text-[7px] text-slate-400 font-bold uppercase mt-1">Recibido y Conforme</p>
+                      </div>
+                   </div>
+                </div>
+
+                <div className="mt-12 text-center border-t border-slate-200 pt-4">
+                   <p className="text-[7px] text-slate-400 font-bold uppercase tracking-widest leading-relaxed">
+                     Calle 19 sur, Centro Empresarial San Remo, Planta Baja, El Tigre, Anzoátegui – Venezuela<br/>
+                     © 2025 VULCAN ENERGY TECHNOLOGY VENEZOLANA, C.A. - Control de Gestión de Talento Humano.
+                   </p>
                 </div>
              </div>
 
-             <div className="flex justify-center gap-4 mt-10 print:hidden">
-                <button onClick={onClose} className="px-10 py-5 bg-slate-100 text-slate-500 rounded-2xl font-black uppercase text-[10px]">Cerrar</button>
+             {/* Controles Finales */}
+             <div className="flex justify-center gap-6 mt-10 print:hidden">
+                <button 
+                  onClick={onClose} 
+                  className="px-12 py-5 bg-slate-100 text-slate-500 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-slate-200 transition-all"
+                >
+                  Finalizar y Cerrar
+                </button>
                 <button 
                   onClick={() => window.print()} 
-                  className="px-16 py-5 bg-[#003366] text-white rounded-2xl font-black uppercase text-[10px] shadow-2xl"
+                  className="px-20 py-5 bg-[#003366] text-white rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] shadow-2xl hover:scale-105 active:scale-95 transition-all flex items-center gap-3"
                 >
-                  Imprimir PDF
+                  <span className="text-xl">🖨️</span> Generar PDF de Acta
                 </button>
              </div>
           </div>

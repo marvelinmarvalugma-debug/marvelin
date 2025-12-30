@@ -62,6 +62,7 @@ export interface Employee {
 }
 
 export interface FullEvaluation {
+  id?: string; // ID único para edición
   employeeId: string;
   campo: string;
   mes: string;
