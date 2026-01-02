@@ -1,17 +1,20 @@
 
 import React, { useState, useMemo } from 'react';
-import { FullEvaluation, Employee, BonusStatus, BONUS_APPROVER, UserRole } from '../types';
+import { FullEvaluation, Employee, BonusStatus, UserRole } from '../types';
+import { t, Language } from '../services/translations';
 
 interface MonthlyReportModalProps {
   evaluations: FullEvaluation[];
   employees: Employee[];
   onClose: () => void;
   currentUserRole?: UserRole;
+  lang: Language;
 }
 
 const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+const MONTHS_EN = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
 
-export default function MonthlyReportModal({ evaluations, employees, onClose, currentUserRole }: MonthlyReportModalProps) {
+export default function MonthlyReportModal({ evaluations, employees, onClose, currentUserRole, lang }: MonthlyReportModalProps) {
   const currentMonthName = new Date().toLocaleString('es-ES', { month: 'long' }).toLowerCase();
   const currentYearStr = new Date().getFullYear().toString();
   
@@ -38,7 +41,7 @@ export default function MonthlyReportModal({ evaluations, employees, onClose, cu
       <div className="bg-white lg:rounded-[40px] shadow-2xl max-w-6xl w-full h-full lg:h-auto lg:max-h-[90vh] flex flex-col overflow-hidden">
         
         <div className="p-8 border-b flex flex-col md:flex-row justify-between items-center gap-6 print:hidden">
-          <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight shrink-0">Reporte Consolidado</h2>
+          <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight shrink-0">{t('consolidated_report', lang)}</h2>
           
           <div className="flex flex-wrap justify-center gap-3">
             <select 
@@ -46,7 +49,7 @@ export default function MonthlyReportModal({ evaluations, employees, onClose, cu
               onChange={(e) => setSelectedMonth(e.target.value)}
               className="px-4 py-2 border-2 border-slate-100 rounded-xl text-xs font-black uppercase text-[#003366] outline-none focus:border-[#003366] cursor-pointer bg-slate-50"
             >
-              {MESES.map(m => <option key={m} value={m}>{m.toUpperCase()}</option>)}
+              {MESES.map((m, i) => <option key={m} value={m}>{lang === 'es' ? m.toUpperCase() : MONTHS_EN[i].toUpperCase()}</option>)}
             </select>
             
             <select 
@@ -65,25 +68,25 @@ export default function MonthlyReportModal({ evaluations, employees, onClose, cu
           <div className="flex flex-col sm:flex-row justify-between items-center border-b-4 border-[#FFCC00] pb-6">
             <h1 className="text-3xl font-black text-[#003366]">VULCAN ENERGY</h1>
             <div className="text-right">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Periodo Reportado</p>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('period_reported', lang)}</p>
               <p className="text-lg font-black text-[#003366] uppercase">{selectedMonth} {selectedYear}</p>
             </div>
           </div>
 
           {filteredEvals.length === 0 ? (
             <div className="text-center py-20 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-100">
-               <p className="text-slate-400 font-black uppercase text-xs tracking-widest">No existen registros para este periodo</p>
+               <p className="text-slate-400 font-black uppercase text-xs tracking-widest">{t('no_records_period', lang)}</p>
             </div>
           ) : (
             <div className="overflow-x-auto border-2 border-slate-50 rounded-3xl">
               <table className="w-full text-left text-[10px]">
                 <thead className="bg-slate-50 border-b-2 border-slate-100">
                   <tr>
-                    <th className="px-6 py-5 font-black text-slate-400 uppercase">Personal</th>
-                    <th className="px-6 py-5 font-black text-slate-400 uppercase text-center">Score Técnico</th>
-                    {isDirector && <th className="px-6 py-5 font-black text-slate-400 uppercase">Incr. Vulcan</th>}
-                    {isDirector && <th className="px-6 py-5 font-black text-slate-400 uppercase">Estatus Bono</th>}
-                    {isDirector && <th className="px-6 py-5 font-black text-slate-400 uppercase">Firma Dirección</th>}
+                    <th className="px-6 py-5 font-black text-slate-400 uppercase">{t('employee', lang)}</th>
+                    <th className="px-6 py-5 font-black text-slate-400 uppercase text-center">{t('technical_efficiency', lang)}</th>
+                    {isDirector && <th className="px-6 py-5 font-black text-slate-400 uppercase">{t('adjust_increment', lang).split('(')[0]}</th>}
+                    {isDirector && <th className="px-6 py-5 font-black text-slate-400 uppercase">{t('performance', lang)}</th>}
+                    {isDirector && <th className="px-6 py-5 font-black text-slate-400 uppercase">{t('sign', lang)}</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
@@ -93,7 +96,7 @@ export default function MonthlyReportModal({ evaluations, employees, onClose, cu
                     return (
                       <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
                         <td className="px-6 py-4">
-                          <p className="font-black text-[#003366] uppercase">{emp?.name || 'EMPLEADO NO ENCONTRADO'}</p>
+                          <p className="font-black text-[#003366] uppercase">{emp?.name || 'N/A'}</p>
                           <p className="text-[9px] text-slate-400 font-bold">V-{emp?.idNumber || 'N/A'}</p>
                         </td>
                         <td className="px-6 py-4 text-center font-black text-indigo-600">{scoreNum.toFixed(1)}%</td>
@@ -115,9 +118,9 @@ export default function MonthlyReportModal({ evaluations, employees, onClose, cu
                         {isDirector && (
                           <td className="px-6 py-4 text-[9px] font-black text-slate-500 uppercase italic">
                             {ev.authorizedBy ? (
-                              <span className="text-emerald-600">✓ Firmado: {ev.authorizedBy}</span>
+                              <span className="text-emerald-600">✓ {ev.authorizedBy}</span>
                             ) : (
-                              <span className="opacity-40">Pendiente de firma</span>
+                              <span className="opacity-40">{t('pending_signs', lang)}</span>
                             )}
                           </td>
                         )}
@@ -131,10 +134,10 @@ export default function MonthlyReportModal({ evaluations, employees, onClose, cu
 
           <div className="pt-20 grid grid-cols-2 gap-20 print:flex hidden">
              <div className="border-t-2 border-slate-800 text-center pt-2">
-                <p className="text-[10px] font-black uppercase">Firma de Coordinación HR</p>
+                <p className="text-[10px] font-black uppercase">{t('hr_sign', lang)}</p>
              </div>
              <div className="border-t-2 border-slate-800 text-center pt-2">
-                <p className="text-[10px] font-black uppercase">Firma de Gerencia Operativa</p>
+                <p className="text-[10px] font-black uppercase">{t('op_manager_sign', lang)}</p>
              </div>
           </div>
         </div>
@@ -147,7 +150,7 @@ export default function MonthlyReportModal({ evaluations, employees, onClose, cu
               filteredEvals.length === 0 ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-[#003366] text-white hover:scale-105 active:scale-95'
             }`}
           >
-            🖨 Exportar Reporte Mensual (PDF)
+            🖨 {t('export_pdf', lang)}
           </button>
         </div>
       </div>

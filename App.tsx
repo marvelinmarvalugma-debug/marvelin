@@ -9,9 +9,10 @@ import AddEmployeeForm from './components/AddEmployeeForm';
 import MonthlyReportModal from './components/MonthlyReportModal';
 import DatabaseConsole from './components/DatabaseConsole';
 import { VulcanDB } from './services/storageService';
+import { t, Language } from './services/translations';
 import { 
   Employee, FullEvaluation, Department, 
-  AUTHORIZED_EVALUATORS, BONUS_APPROVER, SALARY_APPROVERS, BonusStatus, 
+  BONUS_APPROVER, BonusStatus, 
   User, UserRole 
 } from './types';
 
@@ -20,6 +21,7 @@ const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
+  const [lang, setLang] = useState<Language>((localStorage.getItem('vulcan_lang') as Language) || 'es');
   
   const [activeTab, setActiveTab] = useState('dashboard');
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -32,6 +34,10 @@ const App: React.FC = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   
   const [pendingIncrements, setPendingIncrements] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    localStorage.setItem('vulcan_lang', lang);
+  }, [lang]);
 
   useEffect(() => {
     VulcanDB.initialize();
@@ -67,7 +73,7 @@ const App: React.FC = () => {
     e.preventDefault();
     if (!currentUser) return;
     if (!currentUser.password) {
-      if (passwordInput.length < 4) { alert("Mínimo 4 caracteres"); return; }
+      if (passwordInput.length < 4) { alert(lang === 'es' ? "Mínimo 4 caracteres" : "Minimum 4 characters"); return; }
       const updatedUser = { ...currentUser, password: passwordInput };
       VulcanDB.updateUser(updatedUser);
       setCurrentUser(updatedUser);
@@ -75,20 +81,18 @@ const App: React.FC = () => {
     } else {
       if (passwordInput === currentUser.password) {
         setIsAuthenticated(true);
-      } else { alert("Contraseña incorrecta"); }
+      } else { alert(lang === 'es' ? "Contraseña incorrecta" : "Incorrect password"); }
     }
   };
 
   const isDirector = currentUser?.role === UserRole.Director;
   const isJacquelin = currentUser?.username === BONUS_APPROVER;
   
-  // REGLA: Jacquelin NO puede realizar evaluaciones técnicas
   const canUserEvaluatePerformance = useMemo(() => {
     if (!currentUser) return false;
     return !isJacquelin;
   }, [currentUser, isJacquelin]);
 
-  // Pero Jacquelin SÍ puede gestionar la lista de personal (Carga)
   const canManagePersonnel = useMemo(() => {
     return !!currentUser;
   }, [currentUser]);
@@ -115,7 +119,6 @@ const App: React.FC = () => {
     
     lines.forEach((line, index) => {
       const upperLine = line.toUpperCase();
-      // Saltar cabeceras comunes
       if (index === 0 && (upperLine.includes('CEDULA') || upperLine.includes('NOMBRE') || upperLine.includes('CARGO'))) return;
 
       let parts = line.split('\t');
@@ -155,9 +158,9 @@ const App: React.FC = () => {
         const nonDuplicates = newEmps.filter(e => !existingIds.has(e.idNumber));
         return [...nonDuplicates, ...prev];
       });
-      alert(`Éxito: Se han cargado ${newEmps.length} colaboradores al departamento ${type.toUpperCase()}.`);
+      alert(lang === 'es' ? `Éxito: Se han cargado ${newEmps.length} colaboradores.` : `Success: ${newEmps.length} employees loaded.`);
     } else {
-      alert("No se detectaron datos válidos para cargar. Verifique el formato (Cédula, Nombre, Cargo...).");
+      alert(lang === 'es' ? "No se detectaron datos válidos." : "No valid data detected.");
     }
   };
 
@@ -227,6 +230,7 @@ const App: React.FC = () => {
         initialData={editingEvaluation || undefined}
         onClose={() => { setEvaluatingEmployee(null); setEditingEvaluation(null); setSelectedEmployee(null); }} 
         onSave={handleSaveEvaluation} 
+        lang={lang}
       />
     );
     
@@ -244,11 +248,12 @@ const App: React.FC = () => {
           setEditingEvaluation(evaluation);
         } : undefined}
         currentUserRole={currentUser?.role} 
+        lang={lang}
       />
     );
 
     switch (activeTab) {
-      case 'dashboard': return <Dashboard employees={filteredEmployees} />;
+      case 'dashboard': return <Dashboard employees={filteredEmployees} lang={lang} />;
       case 'employees': return (
         <EmployeeList 
           employees={filteredEmployees} 
@@ -256,6 +261,7 @@ const App: React.FC = () => {
           onAddNew={canManagePersonnel ? () => setIsAddingEmployee(true) : () => {}} 
           onBulkAdd={canManagePersonnel ? handleBulkAdd : undefined} 
           isReadOnly={!canManagePersonnel} 
+          lang={lang}
         />
       );
       case 'database': return <DatabaseConsole />;
@@ -266,7 +272,9 @@ const App: React.FC = () => {
             <div className="space-y-8">
               {Object.entries(groups).map(([name, list]) => list.length > 0 && (
                 <div key={name} className="space-y-4">
-                  <h4 className="bg-white px-6 py-3 rounded-2xl border-l-4 border-[#003366] text-xs font-black uppercase text-slate-500">Subordinados {name}</h4>
+                  <h4 className="bg-white px-6 py-3 rounded-2xl border-l-4 border-[#003366] text-xs font-black uppercase text-slate-500">
+                    {lang === 'es' ? `Subordinados ${name}` : `${name} Subordinates`}
+                  </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {list.map(emp => {
                       const evaluated = hasBeenEvaluatedThisMonth(emp.id);
@@ -275,7 +283,7 @@ const App: React.FC = () => {
                           <div className="flex justify-between items-start mb-4">
                             <img src={emp.photo} className="w-12 h-12 rounded-xl grayscale border border-slate-50 shadow-sm" />
                             <span className={`text-[8px] font-black px-3 py-1.5 rounded-lg uppercase tracking-widest ${evaluated ? 'text-emerald-600 bg-emerald-50' : 'text-amber-600 bg-amber-50'}`}>
-                              {evaluated ? 'Evaluado ✓' : 'Pendiente'}
+                              {evaluated ? (lang === 'es' ? 'Evaluado ✓' : 'Evaluated ✓') : (lang === 'es' ? 'Pendiente' : 'Pending')}
                             </span>
                           </div>
                           <h5 className="font-black text-slate-800 uppercase text-[10px] truncate leading-none mb-1">{emp.name}</h5>
@@ -285,7 +293,7 @@ const App: React.FC = () => {
                             onClick={() => setEvaluatingEmployee(emp)} 
                             className={`w-full mt-4 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest ${evaluated || !canUserEvaluatePerformance ? 'bg-slate-50 text-slate-300' : 'bg-[#003366] text-white hover:scale-105 active:scale-95 transition-transform'}`}
                           >
-                            {isJacquelin ? 'Solo Lectura' : evaluated ? 'Periodo Completo' : 'Evaluar Ahora'}
+                            {isJacquelin ? t('read_only', lang) : evaluated ? (lang === 'es' ? 'Periodo Completo' : 'Period Complete') : (lang === 'es' ? 'Evaluar Ahora' : 'Evaluate Now')}
                           </button>
                         </div>
                       );
@@ -302,11 +310,11 @@ const App: React.FC = () => {
             {isDirector && (
               <div className="space-y-6">
                 <div className="bg-[#001a33] p-8 rounded-[32px] text-white shadow-xl border-b-4 border-[#FFCC00]">
-                  <h3 className="text-xl font-black uppercase tracking-tighter">Panel de Aprobación de Beneficios</h3>
-                  <p className="text-[#FFCC00] text-xs font-bold mt-1 uppercase tracking-widest">Validación de nómina para bonos e incrementos salariales.</p>
+                  <h3 className="text-xl font-black uppercase tracking-tighter">{t('approval_title', lang)}</h3>
+                  <p className="text-[#FFCC00] text-xs font-bold mt-1 uppercase tracking-widest">{t('approval_desc', lang)}</p>
                 </div>
                 {evaluationsHistory.filter(ev => ev.condicionBono === BonusStatus.PendingAuth).length === 0 ? (
-                  <div className="p-20 text-center bg-white rounded-[32px] border-2 border-dashed border-slate-100 text-slate-300 font-black uppercase text-[10px] tracking-widest">Sin solicitudes pendientes de firma</div>
+                  <div className="p-20 text-center bg-white rounded-[32px] border-2 border-dashed border-slate-100 text-slate-300 font-black uppercase text-[10px] tracking-widest">{t('pending_signs', lang)}</div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {evaluationsHistory.filter(ev => ev.condicionBono === BonusStatus.PendingAuth).map(ev => {
@@ -329,10 +337,9 @@ const App: React.FC = () => {
                             </div>
                           </div>
                           
-                          {/* Campo Editable de Incremento para Jacquelin/Directores */}
                           {emp?.department === Department.VULCAN && (
                             <div className="bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100">
-                               <label className="text-[8px] font-black text-emerald-800 uppercase tracking-widest mb-1 block">Ajustar Incremento Salarial (Editable)</label>
+                               <label className="text-[8px] font-black text-emerald-800 uppercase tracking-widest mb-1 block">{t('adjust_increment', lang)}</label>
                                <input 
                                  type="text" 
                                  value={currentIncrement} 
@@ -344,9 +351,9 @@ const App: React.FC = () => {
                           )}
 
                           <div className="grid grid-cols-3 gap-2">
-                            <button onClick={() => handleApproveBonus(ev.employeeId, ev.mes, ev.año, BonusStatus.Approved, currentIncrement)} className="bg-emerald-600 text-white py-3 rounded-xl text-[8px] font-black uppercase tracking-widest hover:bg-emerald-700 shadow-lg shadow-emerald-500/10">Firmar ✓</button>
-                            <button onClick={() => handleApproveBonus(ev.employeeId, ev.mes, ev.año, BonusStatus.Conditioned, currentIncrement)} className="bg-amber-500 text-white py-3 rounded-xl text-[8px] font-black uppercase tracking-widest hover:bg-amber-600 shadow-lg shadow-amber-500/10">Condic.</button>
-                            <button onClick={() => handleApproveBonus(ev.employeeId, ev.mes, ev.año, BonusStatus.NotApproved, currentIncrement)} className="bg-rose-600 text-white py-3 rounded-xl text-[8px] font-black uppercase tracking-widest hover:bg-rose-700 shadow-lg shadow-rose-500/10">Denegar</button>
+                            <button onClick={() => handleApproveBonus(ev.employeeId, ev.mes, ev.año, BonusStatus.Approved, currentIncrement)} className="bg-emerald-600 text-white py-3 rounded-xl text-[8px] font-black uppercase tracking-widest hover:bg-emerald-700 shadow-lg shadow-emerald-500/10">{t('sign', lang)} ✓</button>
+                            <button onClick={() => handleApproveBonus(ev.employeeId, ev.mes, ev.año, BonusStatus.Conditioned, currentIncrement)} className="bg-amber-500 text-white py-3 rounded-xl text-[8px] font-black uppercase tracking-widest hover:bg-amber-600 shadow-lg shadow-amber-500/10">{t('conditioned', lang)}</button>
+                            <button onClick={() => handleApproveBonus(ev.employeeId, ev.mes, ev.año, BonusStatus.NotApproved, currentIncrement)} className="bg-rose-600 text-white py-3 rounded-xl text-[8px] font-black uppercase tracking-widest hover:bg-rose-700 shadow-lg shadow-rose-500/10">{t('deny', lang)}</button>
                           </div>
                         </div>
                       );
@@ -358,21 +365,25 @@ const App: React.FC = () => {
             <div className="space-y-6">
               <div className="bg-white p-8 rounded-[32px] border-l-8 border-[#003366] shadow-sm flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-black uppercase text-slate-800 tracking-tighter">Personal Bajo Gestión</h3>
+                  <h3 className="text-lg font-black uppercase text-slate-800 tracking-tighter">
+                    {lang === 'es' ? 'Personal Bajo Gestión' : 'Staff Under Management'}
+                  </h3>
                   <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-                    {isJacquelin ? 'Listado general para supervisión de bonos.' : `Usted gestiona directamente a ${mySubordinates.length} colaboradores.`}
+                    {isJacquelin ? (lang === 'es' ? 'Listado general para supervisión de bonos.' : 'General list for bonus oversight.') : (lang === 'es' ? `Usted gestiona directamente a ${mySubordinates.length} colaboradores.` : `You directly manage ${mySubordinates.length} employees.`)}
                   </p>
                 </div>
               </div>
               {mySubordinates.length > 0 ? renderEvaluatorList(mySubordinates) : (
                 <div className="text-center py-20 bg-slate-50 rounded-[32px] border-2 border-dashed border-slate-200">
-                  <p className="text-slate-300 font-black uppercase text-[10px] tracking-widest">Use la pestaña 'Personal' para consultar cualquier miembro de la nómina</p>
+                  <p className="text-slate-300 font-black uppercase text-[10px] tracking-widest">
+                    {lang === 'es' ? "Use la pestaña 'Personal' para consultar cualquier miembro de la nómina" : "Use the 'Personnel' tab to check any payroll member"}
+                  </p>
                 </div>
               )}
             </div>
           </div>
         );
-      default: return <Dashboard employees={filteredEmployees} />;
+      default: return <Dashboard employees={filteredEmployees} lang={lang} />;
     }
   };
 
@@ -409,8 +420,8 @@ const App: React.FC = () => {
                 className="w-full p-4 bg-slate-50 border-2 rounded-2xl text-center text-lg font-black tracking-widest outline-none focus:border-[#003366]"
               />
               <div className="grid grid-cols-2 gap-4">
-                <button type="button" onClick={() => setCurrentUser(null)} className="py-4 text-slate-400 font-black uppercase text-[10px]">Atrás</button>
-                <button type="submit" className="py-4 bg-[#003366] text-white rounded-2xl font-black uppercase text-[10px]">Entrar</button>
+                <button type="button" onClick={() => setCurrentUser(null)} className="py-4 text-slate-400 font-black uppercase text-[10px]">{lang === 'es' ? 'Atrás' : 'Back'}</button>
+                <button type="submit" className="py-4 bg-[#003366] text-white rounded-2xl font-black uppercase text-[10px]">{lang === 'es' ? 'Entrar' : 'Enter'}</button>
               </div>
             </form>
           )}
@@ -420,9 +431,18 @@ const App: React.FC = () => {
   }
 
   return (
-    <Layout activeTab={activeTab} setActiveTab={setActiveTab} onDownloadReports={() => setShowReportsModal(true)} evaluatorName={currentUser.username} onChangeEvaluator={handleLogout} isSyncing={isSyncing}>
+    <Layout 
+      activeTab={activeTab} 
+      setActiveTab={setActiveTab} 
+      onDownloadReports={() => setShowReportsModal(true)} 
+      evaluatorName={currentUser.username} 
+      onChangeEvaluator={handleLogout} 
+      isSyncing={isSyncing}
+      lang={lang}
+      onLangToggle={() => setLang(prev => prev === 'es' ? 'en' : 'es')}
+    >
       {renderContent()}
-      {showReportsModal && <MonthlyReportModal evaluations={filteredEvaluationsForReport} employees={employees} onClose={() => setShowReportsModal(false)} currentUserRole={currentUser?.role} />}
+      {showReportsModal && <MonthlyReportModal evaluations={filteredEvaluationsForReport} employees={employees} onClose={() => setShowReportsModal(false)} currentUserRole={currentUser?.role} lang={lang} />}
     </Layout>
   );
 };

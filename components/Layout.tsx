@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { UserRole } from '../types';
 import { VulcanDB } from '../services/storageService';
+import { t, Language } from '../services/translations';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -11,6 +12,8 @@ interface LayoutProps {
   evaluatorName?: string | null;
   onChangeEvaluator?: () => void;
   isSyncing?: boolean;
+  lang: Language;
+  onLangToggle: () => void;
 }
 
 const Layout: React.FC<LayoutProps> = ({ 
@@ -20,7 +23,9 @@ const Layout: React.FC<LayoutProps> = ({
   onDownloadReports,
   evaluatorName,
   onChangeEvaluator,
-  isSyncing = false
+  isSyncing = false,
+  lang,
+  onLangToggle
 }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
@@ -28,13 +33,13 @@ const Layout: React.FC<LayoutProps> = ({
   const isDirector = user?.role === UserRole.Director;
 
   const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: '📊' },
-    { id: 'employees', label: 'Personal', icon: '👥' },
-    { id: 'evaluations', label: isDirector ? 'Aprobación Bonos' : 'Matriz Desempeño', icon: isDirector ? '✅' : '📝' },
+    { id: 'dashboard', label: t('dashboard', lang), icon: '📊' },
+    { id: 'employees', label: t('personnel', lang), icon: '👥' },
+    { id: 'evaluations', label: isDirector ? t('bonus_approval', lang) : t('performance_matrix', lang), icon: isDirector ? '✅' : '📝' },
   ];
 
   if (isDirector) {
-    navItems.push({ id: 'database', label: 'Base de Datos', icon: '🗄️' });
+    navItems.push({ id: 'database', label: t('database', lang), icon: '🗄️' });
   }
 
   const handleTabChange = (id: string) => {
@@ -83,7 +88,7 @@ const Layout: React.FC<LayoutProps> = ({
 
         <div className="p-6">
           <button 
-            onClick={() => { if(confirm("¿Borrar todos los datos locales?")) VulcanDB.reset(); }}
+            onClick={() => { if(confirm(lang === 'es' ? "¿Borrar todos los datos locales?" : "Delete all local data?")) VulcanDB.reset(); }}
             className="w-full py-3 border border-white/10 rounded-xl text-[8px] font-black uppercase text-slate-500 hover:text-rose-400 transition-all tracking-widest"
           >
             Reset Database ⚙️
@@ -106,7 +111,7 @@ const Layout: React.FC<LayoutProps> = ({
                 onClick={onChangeEvaluator}
                 className="mt-4 w-full text-[9px] font-black uppercase text-[#FFCC00] hover:text-white transition-colors border-2 border-[#FFCC00]/20 py-2.5 rounded-xl tracking-widest"
               >
-                Cerrar Sesión
+                {t('logout', lang)}
               </button>
             </div>
           </div>
@@ -125,18 +130,26 @@ const Layout: React.FC<LayoutProps> = ({
             <div>
               <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] leading-none mb-1.5">{activeTab}</h2>
               <p className="text-base lg:text-xl font-black text-slate-800 leading-tight uppercase tracking-tight">
-                {isDirector ? 'Gestión de Beneficios' : 'Sistema de Evaluación Técnica'}
+                {isDirector ? t('bonus_approval', lang) : t('performance_matrix', lang)}
               </p>
             </div>
           </div>
           
           <div className="flex items-center gap-4 lg:gap-8">
+            {/* Language Toggle */}
+            <button 
+              onClick={onLangToggle}
+              className="flex items-center gap-2 bg-slate-50 border-2 border-slate-100 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-[#003366] hover:border-[#003366] transition-all"
+            >
+              <span>{lang === 'es' ? '🇪🇸 ES' : '🇺🇸 EN'}</span>
+            </button>
+
             <div className="hidden xl:flex flex-col text-right">
               <span className="text-[11px] font-black text-slate-800 uppercase tracking-widest">{evaluatorName || 'SISTEMA'}</span>
               <div className="flex items-center justify-end gap-1.5 mt-1">
                  <div className={`w-1.5 h-1.5 rounded-full ${isSyncing ? 'bg-amber-500 animate-ping' : 'bg-emerald-500'}`}></div>
                  <span className={`text-[9px] font-black uppercase tracking-[0.2em] ${isSyncing ? 'text-amber-500' : 'text-emerald-500'}`}>
-                   {isSyncing ? 'SINCRO EN CURSO...' : 'SYNC: OK'}
+                   {isSyncing ? t('sync_progress', lang) : t('sync_ok', lang)}
                  </span>
               </div>
             </div>
@@ -145,7 +158,7 @@ const Layout: React.FC<LayoutProps> = ({
               onClick={onDownloadReports}
               className="bg-[#003366] text-white px-5 lg:px-8 py-3 rounded-2xl font-black text-[10px] lg:text-xs hover:bg-[#002244] transition-all shadow-2xl shadow-blue-900/20 uppercase tracking-[0.2em]"
             >
-              <span className="lg:inline hidden">RESUMEN NÓMINA</span>
+              <span className="lg:inline hidden">{t('payroll_summary', lang)}</span>
               <span className="lg:hidden">REPORTE</span>
             </button>
           </div>

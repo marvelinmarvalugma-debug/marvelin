@@ -5,14 +5,16 @@ import {
   PieChart, Pie, Cell, Legend
 } from 'recharts';
 import { Employee } from '../types';
+import { t, Language } from '../services/translations';
 
 interface DashboardProps {
   employees: Employee[];
+  lang: Language;
 }
 
 const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
-const Dashboard: React.FC<DashboardProps> = ({ employees }) => {
+const Dashboard: React.FC<DashboardProps> = ({ employees, lang }) => {
   const stats = useMemo(() => {
     const total = employees.length;
     if (total === 0) return { total: 0, avgScore: 0, deptData: [], topPerformers: [] };
@@ -48,33 +50,33 @@ const Dashboard: React.FC<DashboardProps> = ({ employees }) => {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-          <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Total Empleados</p>
+          <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">{t('total_employees', lang)}</p>
           <h3 className="text-3xl font-black text-slate-800 mt-2">{stats.total}</h3>
-          <p className="text-[10px] text-emerald-600 mt-2 font-black uppercase">↑ Vigentes en Nómina</p>
+          <p className="text-[10px] text-emerald-600 mt-2 font-black uppercase">↑ {t('active_payroll', lang)}</p>
         </div>
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-          <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Promedio Desempeño</p>
+          <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">{t('avg_performance', lang)}</p>
           <h3 className="text-3xl font-black text-indigo-600 mt-2">{Math.round(stats.avgScore)}%</h3>
           <div className="w-full bg-slate-100 h-1.5 rounded-full mt-4 overflow-hidden">
             <div className="bg-indigo-600 h-full transition-all duration-1000" style={{ width: `${stats.avgScore}%` }}></div>
           </div>
         </div>
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-          <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Estado Operativo</p>
+          <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">{t('op_status', lang)}</p>
           <h3 className="text-3xl font-black text-emerald-500 mt-2">100%</h3>
           <p className="text-[10px] text-slate-400 mt-2 font-black uppercase">Seguridad SIHOA ✓</p>
         </div>
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-          <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Meta Mensual</p>
+          <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">{t('monthly_goal', lang)}</p>
           <h3 className="text-3xl font-black text-slate-800 mt-2">95%</h3>
-          <p className="text-[10px] text-indigo-600 mt-2 font-black uppercase">Objetivo Vulcan</p>
+          <p className="text-[10px] text-indigo-600 mt-2 font-black uppercase">{t('vulcan_obj', lang)}</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Performance Chart */}
         <div className="bg-white p-4 lg:p-6 rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
-          <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest mb-6 border-b pb-3">Puntuación por Empleado</h4>
+          <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest mb-6 border-b pb-3">{t('score_by_emp', lang)}</h4>
           <div className="h-64 lg:h-80 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData}>
@@ -93,7 +95,7 @@ const Dashboard: React.FC<DashboardProps> = ({ employees }) => {
 
         {/* Department Distribution */}
         <div className="bg-white p-4 lg:p-6 rounded-3xl shadow-sm border border-slate-100">
-          <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest mb-6 border-b pb-3">Distribución por Área</h4>
+          <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest mb-6 border-b pb-3">{t('dist_by_area', lang)}</h4>
           <div className="h-64 lg:h-80 w-full flex items-center">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -121,15 +123,15 @@ const Dashboard: React.FC<DashboardProps> = ({ employees }) => {
       {/* Top Performers Table */}
       <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
         <div className="p-6 border-b border-slate-50 flex justify-between items-center">
-          <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest">Cuadro de Honor</h4>
+          <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest">{t('honor_roll', lang)}</h4>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead className="bg-slate-50 text-slate-500 text-[10px] font-black uppercase tracking-widest">
               <tr>
-                <th className="px-6 py-4">Empleado</th>
-                <th className="px-6 py-4 hidden sm:table-cell">Rol</th>
-                <th className="px-6 py-4">Desempeño</th>
+                <th className="px-6 py-4">{t('employee', lang)}</th>
+                <th className="px-6 py-4 hidden sm:table-cell">{t('role', lang)}</th>
+                <th className="px-6 py-4">{t('performance', lang)}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">

@@ -1,10 +1,10 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { Employee, FullEvaluation, UserRole } from '../types';
 import { generatePerformanceInsights } from '../services/geminiService';
-// Removed duplicate Radar import to fix compilation error
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer } from 'recharts';
 import { VulcanDB } from '../services/storageService';
+import { t, Language } from '../services/translations';
 
 interface EmployeeDetailsProps {
   employee: Employee;
@@ -13,9 +13,10 @@ interface EmployeeDetailsProps {
   onEvaluate?: (employee: Employee) => void;
   onEditEvaluation?: (evaluation: FullEvaluation) => void;
   currentUserRole?: UserRole;
+  lang: Language;
 }
 
-export default function EmployeeDetails({ employee, evaluations = [], onBack, onEvaluate, onEditEvaluation, currentUserRole }: EmployeeDetailsProps) {
+export default function EmployeeDetails({ employee, evaluations = [], onBack, onEvaluate, onEditEvaluation, currentUserRole, lang }: EmployeeDetailsProps) {
   const [loadingAI, setLoadingAI] = useState(false);
   const [aiAnalysis, setAiAnalysis] = useState<{summary: string, strengths: string[], growthAreas: string[]} | null>(null);
 
@@ -43,13 +44,13 @@ export default function EmployeeDetails({ employee, evaluations = [], onBack, on
   return (
     <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in">
       <div className="flex justify-between items-center">
-        <button onClick={onBack} className="text-slate-500 hover:text-[#003366] font-black uppercase text-[10px] tracking-widest transition-colors">← Volver al Listado</button>
+        <button onClick={onBack} className="text-slate-500 hover:text-[#003366] font-black uppercase text-[10px] tracking-widest transition-colors">← {t('back_to_list', lang)}</button>
         {onEvaluate && (
           <button 
             onClick={() => onEvaluate(employee)}
             className="bg-[#003366] text-white px-8 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-blue-900/10 hover:scale-105 active:scale-95 transition-all"
           >
-            Nueva Evaluación 📝
+            {t('new_evaluation', lang)} 📝
           </button>
         )}
       </div>
@@ -69,7 +70,7 @@ export default function EmployeeDetails({ employee, evaluations = [], onBack, on
             </div>
           </div>
           <div className="mt-8 p-6 rounded-[24px] bg-[#001a33] text-white shadow-2xl shadow-blue-900/20">
-            <p className="text-slate-400 text-[9px] uppercase font-black tracking-[0.2em] mb-1">Eficacia Técnica Promedio</p>
+            <p className="text-slate-400 text-[9px] uppercase font-black tracking-[0.2em] mb-1">{t('tech_efficiency_avg', lang)}</p>
             <h4 className="text-5xl font-black text-[#FFCC00]">{overallScore}%</h4>
           </div>
         </div>
@@ -77,7 +78,7 @@ export default function EmployeeDetails({ employee, evaluations = [], onBack, on
         {/* Análisis y Gráficos */}
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-white rounded-[32px] shadow-sm border border-slate-100 p-8">
-            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-8 border-b pb-4">Matriz de Competencias Radar</h4>
+            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-8 border-b pb-4">{t('comp_radar', lang)}</h4>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <RadarChart data={radarData}>
@@ -91,35 +92,39 @@ export default function EmployeeDetails({ employee, evaluations = [], onBack, on
 
           <div className="bg-white rounded-[32px] shadow-sm border border-slate-100 p-8">
             <div className="flex justify-between items-center mb-6">
-              <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">IA Performance Insights</h4>
-              {!aiAnalysis && <button onClick={handleGenerateInsights} disabled={loadingAI} className="bg-[#003366] text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg hover:bg-[#002244] transition-all">{loadingAI ? 'Analizando...' : 'Generar Feedback'}</button>}
+              <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('ia_insights', lang)}</h4>
+              {!aiAnalysis && <button onClick={handleGenerateInsights} disabled={loadingAI} className="bg-[#003366] text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg hover:bg-[#002244] transition-all">{loadingAI ? t('analyzing', lang) : t('gen_feedback', lang)}</button>}
             </div>
             {aiAnalysis ? (
               <div className="space-y-4 animate-in slide-in-from-bottom-2">
                 <p className="p-5 bg-slate-50 border-l-4 border-[#003366] text-slate-700 italic text-[11px] rounded-r-2xl leading-relaxed">"{aiAnalysis.summary}"</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="p-5 bg-emerald-50 rounded-[24px] border border-emerald-100">
-                    <h5 className="font-black text-[9px] text-emerald-800 uppercase mb-3 tracking-widest">Fortalezas Identificadas</h5>
+                    <h5 className="font-black text-[9px] text-emerald-800 uppercase mb-3 tracking-widest">
+                      {lang === 'es' ? 'Fortalezas Identificadas' : 'Identified Strengths'}
+                    </h5>
                     <ul className="text-[10px] space-y-2 text-slate-600 font-bold">
                       {aiAnalysis.strengths.map((s, i) => <li key={i} className="flex items-start gap-2"><span>•</span> {s}</li>)}
                     </ul>
                   </div>
                   <div className="p-5 bg-amber-50 rounded-[24px] border border-amber-100">
-                    <h5 className="font-black text-[9px] text-amber-800 uppercase mb-3 tracking-widest">Oportunidades de Mejora</h5>
+                    <h5 className="font-black text-[9px] text-amber-800 uppercase mb-3 tracking-widest">
+                      {lang === 'es' ? 'Oportunidades de Mejora' : 'Growth Opportunities'}
+                    </h5>
                     <ul className="text-[10px] space-y-2 text-slate-600 font-bold">
                       {aiAnalysis.growthAreas.map((g, i) => <li key={i} className="flex items-start gap-2"><span>•</span> {g}</li>)}
                     </ul>
                   </div>
                 </div>
               </div>
-            ) : <p className="text-center py-10 text-slate-300 text-[9px] font-black uppercase tracking-[0.2em]">Ejecute el análisis de IA para ver recomendaciones estratégicas</p>}
+            ) : <p className="text-center py-10 text-slate-300 text-[9px] font-black uppercase tracking-[0.2em]">{lang === 'es' ? 'Ejecute el análisis de IA' : 'Run AI analysis for insights'}</p>}
           </div>
 
-          {/* Historial de Evaluaciones Almacenadas */}
+          {/* Historial de Evaluaciones */}
           <div className="bg-white rounded-[32px] shadow-sm border border-slate-100 p-8">
-            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 border-b pb-4">Historial de Evaluaciones</h4>
+            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 border-b pb-4">{t('eval_history', lang)}</h4>
             {employeeHistory.length === 0 ? (
-              <p className="text-center py-8 text-slate-300 text-[10px] font-black uppercase">No se registran evaluaciones en la base de datos local.</p>
+              <p className="text-center py-8 text-slate-300 text-[10px] font-black uppercase">{t('no_evals', lang)}</p>
             ) : (
               <div className="space-y-3">
                 {employeeHistory.map((ev, idx) => (
@@ -130,7 +135,7 @@ export default function EmployeeDetails({ employee, evaluations = [], onBack, on
                       </div>
                       <div>
                         <p className="text-xs font-black text-[#003366] uppercase">{ev.mes} {ev.año}</p>
-                        <p className="text-[9px] text-slate-400 font-black uppercase tracking-tighter">Evaluador: {ev.evaluador}</p>
+                        <p className="text-[9px] text-slate-400 font-black uppercase tracking-tighter">{lang === 'es' ? 'Evaluador' : 'Evaluator'}: {ev.evaluador}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-4">
@@ -143,13 +148,13 @@ export default function EmployeeDetails({ employee, evaluations = [], onBack, on
                                   {ev.condicionBono}
                               </span>
                             )}
-                            <p className="text-[8px] text-slate-300 font-black mt-2 uppercase tracking-widest">REGISTRADO: {ev.date}</p>
+                            <p className="text-[8px] text-slate-300 font-black mt-2 uppercase tracking-widest">{lang === 'es' ? 'REGISTRADO' : 'REGISTERED'}: {ev.date}</p>
                         </div>
                         {onEditEvaluation && (
                           <button 
                             onClick={(e) => { e.stopPropagation(); onEditEvaluation(ev); }}
                             className="p-3 bg-white border-2 border-slate-100 rounded-xl hover:border-indigo-600 hover:text-indigo-600 transition-all shadow-sm"
-                            title="Editar esta evaluación"
+                            title={t('edit_eval', lang)}
                           >
                             ✏️
                           </button>
