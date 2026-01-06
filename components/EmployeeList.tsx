@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Employee, Department } from '../types';
 import { t, Language } from '../services/translations';
 
@@ -7,17 +7,28 @@ interface EmployeeListProps {
   employees: Employee[];
   onSelect: (employee: Employee) => void;
   onAddNew: () => void;
+  onDelete: (id: string) => void;
+  onClearAll: () => void;
   onBulkAdd?: (data: string, type: 'ato' | 'vulcan') => void;
   isReadOnly?: boolean;
   lang: Language;
 }
 
-const EmployeeList: React.FC<EmployeeListProps> = ({ employees, onSelect, onAddNew, onBulkAdd, isReadOnly = false, lang }) => {
+const MESES_ES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+
+const EmployeeList: React.FC<EmployeeListProps> = ({ employees, onSelect, onAddNew, onDelete, onClearAll, onBulkAdd, isReadOnly = false, lang }) => {
   const [filter, setFilter] = useState<string>('all');
   const [search, setSearch] = useState('');
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [bulkText, setBulkText] = useState('');
   const [bulkType, setBulkType] = useState<'ato' | 'vulcan'>('ato');
+
+  const currentPeriod = useMemo(() => {
+    const now = new Date();
+    const month = MESES_ES[now.getMonth()];
+    const year = now.getFullYear().toString();
+    return `${month} ${year}`.toLowerCase();
+  }, []);
 
   const filteredEmployees = employees.filter(emp => {
     const matchesDept = filter === 'all' || emp.department === filter;
@@ -30,9 +41,11 @@ const EmployeeList: React.FC<EmployeeListProps> = ({ employees, onSelect, onAddN
 
   const handleBulkSubmit = () => {
     if (onBulkAdd && bulkText) {
-      onBulkAdd(bulkText, bulkType);
-      setShowBulkModal(false);
-      setBulkText('');
+      if (confirm(t('bulk_warning', lang))) {
+        onBulkAdd(bulkText, bulkType);
+        setShowBulkModal(false);
+        setBulkText('');
+      }
     }
   };
 
@@ -44,10 +57,10 @@ const EmployeeList: React.FC<EmployeeListProps> = ({ employees, onSelect, onAddN
              <div className="flex justify-between items-start mb-6">
                <div>
                  <h3 className="text-2xl font-black text-[#003366] uppercase tracking-tighter">
-                   {lang === 'es' ? 'Carga Masiva de Nómina' : 'Bulk Payroll Loading'}
+                   {lang === 'es' ? 'Sustitución Masiva de Nómina' : 'Bulk Payroll Replacement'}
                  </h3>
-                 <p className="text-[10px] text-slate-400 font-black mt-1 uppercase tracking-widest">
-                   {lang === 'es' ? 'Importación exclusiva para personal ATO / VULCAN' : 'Exclusive import for ATO / VULCAN personnel'}
+                 <p className="text-[10px] text-rose-500 font-black mt-1 uppercase tracking-widest">
+                   ⚠️ {t('bulk_warning', lang)}
                  </p>
                </div>
                <button onClick={() => setShowBulkModal(false)} className="w-10 h-10 rounded-full bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-rose-50 hover:text-rose-500 transition-all">✕</button>
@@ -88,12 +101,11 @@ const EmployeeList: React.FC<EmployeeListProps> = ({ employees, onSelect, onAddN
                 </div>
                 
                 <div className="space-y-6">
-                   <div className="bg-blue-50 p-6 rounded-3xl border border-blue-100">
-                      <h4 className="text-[10px] font-black text-blue-900 uppercase tracking-widest mb-3">{lang === 'es' ? 'Instrucciones' : 'Instructions'}</h4>
-                      <ul className="text-[9px] text-blue-700/70 space-y-2 font-bold uppercase leading-relaxed">
-                        <li>• {lang === 'es' ? 'Verifique el modo seleccionado' : 'Verify selected mode'}.</li>
-                        <li>• {lang === 'es' ? 'Use tabuladores o comas' : 'Use tabs or commas'}.</li>
-                      </ul>
+                   <div className="bg-rose-50 p-6 rounded-3xl border border-rose-100">
+                      <h4 className="text-[10px] font-black text-rose-900 uppercase tracking-widest mb-3">{lang === 'es' ? 'IMPORTANTE' : 'IMPORTANT'}</h4>
+                      <p className="text-[9px] text-rose-700 font-bold uppercase leading-relaxed">
+                        Al procesar esta carga, el sistema eliminará automáticamente a todos los trabajadores registrados actualmente para dar paso a la nueva lista.
+                      </p>
                    </div>
                 </div>
              </div>
@@ -106,10 +118,10 @@ const EmployeeList: React.FC<EmployeeListProps> = ({ employees, onSelect, onAddN
                 onClick={handleBulkSubmit} 
                 disabled={!bulkText.trim()}
                 className={`px-12 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all ${
-                  !bulkText.trim() ? 'bg-slate-100 text-slate-300' : 'bg-[#003366] text-white shadow-xl shadow-blue-900/20 hover:scale-105 active:scale-95'
+                  !bulkText.trim() ? 'bg-slate-100 text-slate-300' : 'bg-rose-600 text-white shadow-xl shadow-rose-900/20 hover:scale-105 active:scale-95'
                 }`}
                >
-                 {lang === 'es' ? 'Importar a Nómina' : 'Import to Payroll'} {bulkType.toUpperCase()}
+                 {lang === 'es' ? 'Blanquear y Cargar' : 'Clear and Load'} {bulkType.toUpperCase()}
                </button>
              </div>
           </div>
@@ -128,16 +140,22 @@ const EmployeeList: React.FC<EmployeeListProps> = ({ employees, onSelect, onAddN
             />
           </div>
           {!isReadOnly && (
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
+              <button 
+                onClick={() => { if(confirm(t('confirm_clear_all', lang))) onClearAll(); }}
+                className="bg-white border-2 border-rose-200 text-rose-500 px-6 py-4 rounded-3xl text-[10px] font-black hover:bg-rose-50 transition-all uppercase tracking-widest"
+              >
+                 🗑️ {t('clear_all', lang)}
+              </button>
               <button 
                 onClick={() => setShowBulkModal(true)}
-                className="flex-1 sm:flex-none bg-white border-2 border-[#003366] text-[#003366] px-6 py-4 rounded-3xl text-[10px] font-black hover:bg-slate-50 transition-all uppercase tracking-widest"
+                className="bg-white border-2 border-[#003366] text-[#003366] px-6 py-4 rounded-3xl text-[10px] font-black hover:bg-slate-50 transition-all uppercase tracking-widest"
               >
                  📥 {t('bulk_load', lang)}
               </button>
               <button 
                 onClick={onAddNew}
-                className="flex-1 sm:flex-none bg-[#003366] text-white px-8 py-4 rounded-3xl text-[10px] font-black shadow-lg shadow-blue-900/10 hover:bg-[#002244] transition-all uppercase tracking-widest"
+                className="bg-[#003366] text-white px-8 py-4 rounded-3xl text-[10px] font-black shadow-lg shadow-blue-900/10 hover:bg-[#002244] transition-all uppercase tracking-widest"
               >
                 + {t('manual_reg', lang)}
               </button>
@@ -145,12 +163,12 @@ const EmployeeList: React.FC<EmployeeListProps> = ({ employees, onSelect, onAddN
           )}
         </div>
 
-        <div className="flex gap-3 px-2">
+        <div className="flex gap-3 px-2 overflow-x-auto pb-2">
           {['all', Department.ATO, Department.VULCAN].map(cat => (
             <button 
               key={cat}
               onClick={() => setFilter(cat)}
-              className={`px-10 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border-2 ${
+              className={`whitespace-nowrap px-10 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border-2 ${
                 filter === cat 
                   ? 'bg-[#FFCC00] text-[#003366] border-[#FFCC00] shadow-lg shadow-yellow-500/20' 
                   : 'bg-white text-slate-400 border-slate-100 hover:text-slate-600 hover:border-slate-200'
@@ -166,18 +184,41 @@ const EmployeeList: React.FC<EmployeeListProps> = ({ employees, onSelect, onAddN
         {filteredEmployees.map(emp => {
           const score = Math.round(emp.kpis.reduce((acc, k) => acc + (k.score * k.weight / 100), 0));
           const isAto = emp.department === Department.ATO;
+          const isEvaluated = emp.lastEvaluation.toLowerCase() === currentPeriod;
 
           return (
             <div 
               key={emp.id}
               onClick={() => onSelect(emp)}
-              className={`group bg-white rounded-[32px] p-6 shadow-sm border-2 transition-all cursor-pointer relative overflow-hidden border-slate-50 hover:border-[#003366] hover:shadow-2xl hover:shadow-blue-900/5 hover:-translate-y-1`}
+              className={`group bg-white rounded-[32px] p-6 shadow-sm border-2 transition-all cursor-pointer relative overflow-hidden ${isEvaluated ? 'border-emerald-500 bg-emerald-50/10 shadow-emerald-500/5' : 'border-slate-50'} hover:border-[#003366] hover:shadow-2xl hover:shadow-blue-900/5 hover:-translate-y-1`}
             >
               <div className={`absolute top-0 right-0 ${isAto ? 'bg-indigo-600' : 'bg-emerald-600'} text-white text-[7px] font-black px-4 py-1.5 uppercase tracking-widest rounded-bl-xl shadow-sm`}>
                 {emp.department}
               </div>
 
-              <div className="flex items-start space-x-4">
+              {!isReadOnly && (
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (confirm(t('confirm_delete', lang))) {
+                      onDelete(emp.id);
+                    }
+                  }}
+                  className="absolute bottom-20 right-4 p-2 bg-rose-50 text-rose-400 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity hover:bg-rose-500 hover:text-white"
+                  title={t('delete_employee', lang)}
+                >
+                  🗑️
+                </button>
+              )}
+
+              {isEvaluated && (
+                <div className="absolute top-2 left-2 bg-emerald-500 text-white p-1 rounded-lg shadow-md flex items-center gap-1.5 px-2 animate-in slide-in-from-left-2">
+                  <span className="text-[10px]">✓</span>
+                  <span className="text-[7px] font-black uppercase tracking-widest">EVALUADO</span>
+                </div>
+              )}
+
+              <div className="flex items-start space-x-4 mt-2">
                 <div className="relative shrink-0">
                   <img src={emp.photo} alt={emp.name} className="w-16 h-16 rounded-2xl border-2 border-slate-50 shadow-sm object-cover grayscale transition-all group-hover:grayscale-0" />
                 </div>
@@ -190,16 +231,20 @@ const EmployeeList: React.FC<EmployeeListProps> = ({ employees, onSelect, onAddN
               <div className="mt-8 pt-6 border-t border-slate-50">
                 <div className="flex justify-between items-center mb-2.5">
                   <span className="text-[8px] font-black text-slate-300 uppercase tracking-widest">{t('technical_efficiency', lang)}</span>
-                  <span className="text-[10px] font-black text-[#003366]">{score}%</span>
+                  <span className={`text-[10px] font-black ${isEvaluated ? 'text-emerald-600' : 'text-[#003366]'}`}>{score}%</span>
                 </div>
                 <div className="w-full bg-slate-50 h-2 rounded-full overflow-hidden">
-                  <div className="bg-[#003366] h-full transition-all" style={{ width: `${score}%` }}></div>
+                  <div className={`h-full transition-all ${isEvaluated ? 'bg-emerald-500' : 'bg-[#003366]'}`} style={{ width: `${score}%` }}></div>
                 </div>
               </div>
 
               <div className="mt-5 flex justify-between items-end">
-                <span className="text-[9px] font-bold text-slate-400 uppercase">{emp.lastEvaluation}</span>
-                <span className="text-[8px] font-black text-[#003366] uppercase bg-slate-50 px-4 py-2 rounded-xl group-hover:bg-[#003366] group-hover:text-white transition-all">{t('full_profile', lang)}</span>
+                <span className={`text-[9px] font-bold uppercase ${isEvaluated ? 'text-emerald-500' : 'text-slate-400'}`}>
+                  {isEvaluated ? `Periodo: ${emp.lastEvaluation}` : emp.lastEvaluation}
+                </span>
+                <span className={`text-[8px] font-black uppercase px-4 py-2 rounded-xl transition-all ${isEvaluated ? 'bg-emerald-500 text-white' : 'bg-slate-50 text-[#003366] group-hover:bg-[#003366] group-hover:text-white'}`}>
+                  {t('full_profile', lang)}
+                </span>
               </div>
             </div>
           );

@@ -1,6 +1,7 @@
 
-import { Employee, FullEvaluation, User, UserRole, AUTHORIZED_EVALUATORS, BONUS_APPROVER } from '../types';
+import { Employee, FullEvaluation, User, UserRole, AUTHORIZED_EVALUATORS, SALARY_APPROVERS } from '../types';
 import { INITIAL_EMPLOYEES } from '../constants';
+import { supabase, handleSupabaseError } from './supabaseService';
 
 const DB_KEYS = {
   EMPLOYEES: 'vulcan_db_employees_v1',
@@ -8,76 +9,164 @@ const DB_KEYS = {
   USERS: 'vulcan_db_users_v1',
 };
 
-const syncChannel = new BroadcastChannel('vulcan_sync_channel');
+let syncChannel: BroadcastChannel | null = null;
+try {
+  syncChannel = new BroadcastChannel('vulcan_sync_channel');
+} catch (e) {
+  console.warn("BroadcastChannel not supported in this environment.");
+}
 
 export const VulcanDB = {
-  initialize: () => {
-    // Inicializar Empleados (Merge para no perder datos nuevos)
-    const existingEmps = localStorage.getItem(DB_KEYS.EMPLOYEES);
-    if (!existingEmps) {
-      localStorage.setItem(DB_KEYS.EMPLOYEES, JSON.stringify(INITIAL_EMPLOYEES));
-    } else {
-      const emps = JSON.parse(existingEmps);
-      // Asegurar que Jacquelin y Nelson existan
-      INITIAL_EMPLOYEES.forEach(initial => {
-        if (!emps.some((e: Employee) => e.id === initial.id)) {
-          emps.push(initial);
-        }
+  initialize: async () => {
+    const cloudAvailable = await VulcanDB.pullFromCloud();
+
+    const localUsersStr = localStorage.getItem(DB_KEYS.USERS);
+    const localUsers = localUsersStr ? JSON.parse(localUsersStr) : [];
+    
+    if (localUsers.length === 0 && !cloudAvailable) {
+      const initialUsers: User[] = AUTHORIZED_EVALUATORS.map(name => {
+        const isManager = SALARY_APPROVERS.some(mgr => name.toLowerCase().trim() === mgr.toLowerCase().trim());
+        return {
+          username: name,
+          role: isManager ? UserRole.Director : UserRole.Supervisor,
+          password: '' 
+        };
       });
-      localStorage.setItem(DB_KEYS.EMPLOYEES, JSON.stringify(emps));
+      localStorage.setItem(DB_KEYS.USERS, JSON.stringify(initialUsers));
+      await supabase.from('users').upsert(initialUsers);
     }
 
-    // Inicializar Tabla de Usuarios
-    const existingUsers = localStorage.getItem(DB_KEYS.USERS);
-    if (!existingUsers) {
-      const initialUsers: User[] = AUTHORIZED_EVALUATORS.map(name => ({
-        username: name,
-        role: name === BONUS_APPROVER ? UserRole.Director : UserRole.Supervisor,
-        password: '' 
-      }));
-      localStorage.setItem(DB_KEYS.USERS, JSON.stringify(initialUsers));
+    const localEmpsStr = localStorage.getItem(DB_KEYS.EMPLOYEES);
+    const hasKey = localEmpsStr !== null;
+    const localEmps = localEmpsStr ? JSON.parse(localEmpsStr) : [];
+
+    // Si no existe la clave ni datos en la nube, cargar iniciales
+    if (!hasKey && !cloudAvailable) {
+      localStorage.setItem(DB_KEYS.EMPLOYEES, JSON.stringify(INITIAL_EMPLOYEES));
+      await supabase.from('employees').upsert(INITIAL_EMPLOYEES);
+    }
+  },
+
+  pullFromCloud: async (): Promise<boolean> => {
+    try {
+      const [usersRes, empsRes, evalsRes] = await Promise.all([
+        supabase.from('users').select('*'),
+        supabase.from('employees').select('*'),
+        supabase.from('evaluations').select('*')
+      ]);
+
+      let hasData = false;
+      if (usersRes.data && usersRes.data.length > 0) {
+        localStorage.setItem(DB_KEYS.USERS, JSON.stringify(usersRes.data));
+        hasData = true;
+      }
+      if (empsRes.data && empsRes.data.length > 0) {
+        localStorage.setItem(DB_KEYS.EMPLOYEES, JSON.stringify(empsRes.data));
+        hasData = true;
+      }
+      if (evalsRes.data && evalsRes.data.length > 0) {
+        localStorage.setItem(DB_KEYS.EVALUATIONS, JSON.stringify(evalsRes.data));
+        hasData = true;
+      }
+      return hasData;
+    } catch (e) {
+      console.warn("Error pulling from cloud:", e);
+      return false;
     }
   },
 
   getUsers: (): User[] => {
-    const data = localStorage.getItem(DB_KEYS.USERS);
-    return data ? JSON.parse(data) : [];
+    try {
+      const data = localStorage.getItem(DB_KEYS.USERS);
+      return data ? JSON.parse(data) : [];
+    } catch (e) {
+      return [];
+    }
   },
 
   getUser: (username: string): User | undefined => {
     return VulcanDB.getUsers().find(u => u.username === username);
   },
 
-  updateUser: (updatedUser: User) => {
+  updateUser: async (updatedUser: User) => {
     const users = VulcanDB.getUsers();
     const index = users.findIndex(u => u.username === updatedUser.username);
     if (index !== -1) {
       users[index] = updatedUser;
       localStorage.setItem(DB_KEYS.USERS, JSON.stringify(users));
-      syncChannel.postMessage({ type: 'SYNC_USERS', data: users });
+      const { error } = await supabase.from('users').upsert(updatedUser);
+      handleSupabaseError(error);
+      if (syncChannel) syncChannel.postMessage({ type: 'SYNC_USERS', data: users });
     }
   },
 
   getEmployees: (): Employee[] => {
-    const data = localStorage.getItem(DB_KEYS.EMPLOYEES);
-    return data ? JSON.parse(data) : INITIAL_EMPLOYEES;
-  },
-
-  saveEmployees: (employees: Employee[], broadcast = true) => {
-    localStorage.setItem(DB_KEYS.EMPLOYEES, JSON.stringify(employees));
-    if (broadcast) {
-      syncChannel.postMessage({ type: 'SYNC_EMPLOYEES', data: employees });
+    try {
+      const data = localStorage.getItem(DB_KEYS.EMPLOYEES);
+      return data ? JSON.parse(data) : INITIAL_EMPLOYEES;
+    } catch (e) {
+      return INITIAL_EMPLOYEES;
     }
   },
 
-  getEvaluations: (): FullEvaluation[] => {
-    const data = localStorage.getItem(DB_KEYS.EVALUATIONS);
-    return data ? JSON.parse(data) : [];
+  saveEmployees: async (employees: Employee[], broadcast = true) => {
+    const cleanEmployees = employees.map(({ notifications, ...rest }) => ({
+        id: rest.id,
+        idNumber: rest.idNumber,
+        name: rest.name,
+        role: rest.role,
+        department: rest.department,
+        photo: rest.photo,
+        managerName: rest.managerName,
+        managerRole: rest.managerRole,
+        lastEvaluation: rest.lastEvaluation,
+        summary: rest.summary,
+        kpis: rest.kpis
+    }));
+
+    localStorage.setItem(DB_KEYS.EMPLOYEES, JSON.stringify(employees));
+    const { error } = await supabase.from('employees').upsert(cleanEmployees);
+    
+    if (error) {
+        console.error("Error al guardar en Supabase:", error);
+        throw new Error(error.message);
+    }
+
+    if (broadcast && syncChannel) {
+      syncChannel.postMessage({ type: 'SYNC_EMPLOYEES', data: employees });
+    }
+    return true;
   },
 
-  saveEvaluations: (evaluations: FullEvaluation[], broadcast = true) => {
+  deleteEmployee: async (id: string) => {
+    const employees = VulcanDB.getEmployees().filter(e => e.id !== id);
+    localStorage.setItem(DB_KEYS.EMPLOYEES, JSON.stringify(employees));
+    
+    const { error } = await supabase.from('employees').delete().eq('id', id);
+    if (error) {
+      console.error("Error al eliminar en Supabase:", error);
+    }
+
+    if (syncChannel) {
+      syncChannel.postMessage({ type: 'SYNC_EMPLOYEES', data: employees });
+    }
+    return employees;
+  },
+
+  getEvaluations: (): FullEvaluation[] => {
+    try {
+      const data = localStorage.getItem(DB_KEYS.EVALUATIONS);
+      return data ? JSON.parse(data) : [];
+    } catch (e) {
+      return [];
+    }
+  },
+
+  saveEvaluations: async (evaluations: FullEvaluation[], broadcast = true) => {
     localStorage.setItem(DB_KEYS.EVALUATIONS, JSON.stringify(evaluations));
-    if (broadcast) {
+    const { error } = await supabase.from('evaluations').upsert(evaluations);
+    handleSupabaseError(error);
+    if (broadcast && syncChannel) {
       syncChannel.postMessage({ type: 'SYNC_EVALUATIONS', data: evaluations });
     }
   },
@@ -91,18 +180,22 @@ export const VulcanDB = {
     try {
       return btoa(unescape(encodeURIComponent(JSON.stringify(data))));
     } catch (e) {
-      console.error("Export error:", e);
       return "";
     }
   },
 
-  importBackup: (code: string): boolean => {
+  importBackup: async (code: string): Promise<boolean> => {
     try {
       const decoded = decodeURIComponent(escape(atob(code)));
       const data = JSON.parse(decoded);
-      if (data.employees) localStorage.setItem(DB_KEYS.EMPLOYEES, JSON.stringify(data.employees));
-      if (data.evaluations) localStorage.setItem(DB_KEYS.EVALUATIONS, JSON.stringify(data.evaluations));
-      if (data.users) localStorage.setItem(DB_KEYS.USERS, JSON.stringify(data.users));
+      if (data.employees) {
+        localStorage.setItem(DB_KEYS.EMPLOYEES, JSON.stringify(data.employees));
+        await VulcanDB.saveEmployees(data.employees);
+      }
+      if (data.evaluations) {
+        localStorage.setItem(DB_KEYS.EVALUATIONS, JSON.stringify(data.evaluations));
+        await supabase.from('evaluations').upsert(data.evaluations);
+      }
       return true;
     } catch (e) {
       return false;
@@ -110,12 +203,15 @@ export const VulcanDB = {
   },
 
   onSync: (callback: (payload: { type: string, data: any }) => void) => {
-    syncChannel.onmessage = (event) => {
+    if (!syncChannel) return null;
+    const handler = (event: MessageEvent) => {
       callback(event.data);
     };
+    syncChannel.addEventListener('message', handler);
+    return () => syncChannel?.removeEventListener('message', handler);
   },
 
-  reset: () => {
+  reset: async () => {
     localStorage.clear();
     window.location.reload();
   }

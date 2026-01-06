@@ -103,6 +103,6 @@ export const AUTHORIZED_EVALUATORS = [
   "Grisélida Gibbs"
 ];
 
-// Gerentes con poder de decisión salarial y aprobación de bonos (Solo los 3 especificados)
-export const SALARY_APPROVERS = ["Xuezhi Jin", "Jacquelin Naim", "Jacqueline Naim", "Aurelio Cuya"];
+// Gerentes autorizados para aprobación salarial y bonos
+export const SALARY_APPROVERS = ["Jacquelin Naim", "Aurelio Cuya", "Xuezhi Jin"];
 export const BONUS_APPROVER = "Jacquelin Naim";

@@ -1,6 +1,16 @@
 
 export const translations = {
   es: {
+    // Login
+    welcome_back: "Bienvenido de Nuevo",
+    login_subtitle: "Gestión de Talento Humano y Desempeño",
+    username_label: "Nombre de Usuario",
+    password_label: "Contraseña",
+    login_button: "Iniciar Sesión",
+    first_time_msg: "Si es su primera vez, defina una contraseña de 4 dígitos.",
+    invalid_credentials: "Credenciales inválidas o incompletas.",
+    select_profile: "Seleccione su Perfil",
+    
     // Nav
     dashboard: "Dashboard",
     personnel: "Personal",
@@ -35,6 +45,11 @@ export const translations = {
     personal_vulcan: "Personal VULCAN",
     technical_efficiency: "Eficacia Técnica",
     full_profile: "Perfil Completo",
+    delete_employee: "Eliminar Empleado",
+    confirm_delete: "¿Está seguro de eliminar a este empleado? Esta acción no se puede deshacer.",
+    clear_all: "Limpiar Nómina",
+    confirm_clear_all: "¿ADVERTENCIA CRÍTICA: Desea eliminar a TODOS los empleados? Esta acción blanqueará la base de datos por completo.",
+    bulk_warning: "Esta operación reemplazará toda la nómina actual por los datos nuevos.",
     
     // Details
     back_to_list: "Volver al Listado",
@@ -80,6 +95,7 @@ export const translations = {
     sign: "Firmar",
     conditioned: "Condic.",
     deny: "Denegar",
+    evaluar_ahora: "Evaluar Ahora",
 
     // Add Employee
     add_title: "Registrar Nuevo Personal",
@@ -111,6 +127,16 @@ export const translations = {
     invalid_code: "Código Inválido"
   },
   en: {
+    // Login
+    welcome_back: "Welcome Back",
+    login_subtitle: "Human Talent & Performance Management",
+    username_label: "Username",
+    password_label: "Password",
+    login_button: "Log In",
+    first_time_msg: "If it's your first time, set a 4-digit password.",
+    invalid_credentials: "Invalid or incomplete credentials.",
+    select_profile: "Select your Profile",
+
     // Nav
     dashboard: "Dashboard",
     personnel: "Personnel",
@@ -145,6 +171,11 @@ export const translations = {
     personal_vulcan: "VULCAN Personnel",
     technical_efficiency: "Technical Efficiency",
     full_profile: "Full Profile",
+    delete_employee: "Delete Employee",
+    confirm_delete: "Are you sure you want to delete this employee? This action cannot be undone.",
+    clear_all: "Clear Payroll",
+    confirm_clear_all: "CRITICAL WARNING: Do you want to delete ALL employees? This will completely clear the database.",
+    bulk_warning: "This operation will replace all current payroll data with new entries.",
     
     // Details
     back_to_list: "Back to List",
@@ -190,6 +221,7 @@ export const translations = {
     sign: "Sign",
     conditioned: "Cond.",
     deny: "Deny",
+    evaluar_ahora: "Evaluate Now",
 
     // Add Employee
     add_title: "Register New Personnel",

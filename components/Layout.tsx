@@ -32,13 +32,18 @@ const Layout: React.FC<LayoutProps> = ({
   const user = evaluatorName ? VulcanDB.getUser(evaluatorName) : null;
   const isDirector = user?.role === UserRole.Director;
 
+  // Restricción específica para Jacquelin Naim (variaciones de nombre incluidas)
+  const isJacquelin = evaluatorName?.toLowerCase().trim() === 'jacquelin naim' || 
+                      evaluatorName?.toLowerCase().trim() === 'jacqueline naim';
+
   const navItems = [
     { id: 'dashboard', label: t('dashboard', lang), icon: '📊' },
     { id: 'employees', label: t('personnel', lang), icon: '👥' },
     { id: 'evaluations', label: isDirector ? t('bonus_approval', lang) : t('performance_matrix', lang), icon: isDirector ? '✅' : '📝' },
   ];
 
-  if (isDirector) {
+  // Solo los Directores que no sean Jacquelin pueden ver la consola de base de datos
+  if (isDirector && !isJacquelin) {
     navItems.push({ id: 'database', label: t('database', lang), icon: '🗄️' });
   }
 
@@ -85,15 +90,6 @@ const Layout: React.FC<LayoutProps> = ({
             </button>
           ))}
         </nav>
-
-        <div className="p-6">
-          <button 
-            onClick={() => { if(confirm(lang === 'es' ? "¿Borrar todos los datos locales?" : "Delete all local data?")) VulcanDB.reset(); }}
-            className="w-full py-3 border border-white/10 rounded-xl text-[8px] font-black uppercase text-slate-500 hover:text-rose-400 transition-all tracking-widest"
-          >
-            Reset Database ⚙️
-          </button>
-        </div>
 
         {evaluatorName && (
           <div className="p-8 border-t border-white/5 bg-[#001326]">

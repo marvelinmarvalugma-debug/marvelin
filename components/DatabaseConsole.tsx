@@ -2,9 +2,15 @@
 import React, { useState } from 'react';
 import { VulcanDB } from '../services/storageService';
 import { UserRole } from '../types';
+import SyncPanel from './SyncPanel';
+import { Language, t } from '../services/translations';
 
-export default function DatabaseConsole() {
-  const [activeTable, setActiveTable] = useState<'employees' | 'evaluations' | 'users'>('employees');
+interface DatabaseConsoleProps {
+  lang: Language;
+}
+
+export default function DatabaseConsole({ lang }: DatabaseConsoleProps) {
+  const [activeTable, setActiveTable] = useState<'employees' | 'evaluations' | 'users' | 'sync'>('employees');
   const [editingRaw, setEditingRaw] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState(false);
 
@@ -14,7 +20,7 @@ export default function DatabaseConsole() {
     users: VulcanDB.getUsers()
   };
 
-  const currentData = data[activeTable];
+  const currentData = activeTable !== 'sync' ? (data as any)[activeTable] : [];
 
   const handleRawSave = () => {
     try {
@@ -46,7 +52,12 @@ export default function DatabaseConsole() {
           <div className="flex gap-2">
             <button 
               onClick={() => {
-                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const dump = {
+                  employees: VulcanDB.getEmployees(),
+                  evaluations: VulcanDB.getEvaluations(),
+                  users: VulcanDB.getUsers()
+                };
+                const blob = new Blob([JSON.stringify(dump, null, 2)], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
@@ -78,6 +89,15 @@ export default function DatabaseConsole() {
             </button>
           ))}
           
+          <button
+            onClick={() => { setActiveTable('sync'); setEditingRaw(null); }}
+            className={`w-full p-4 rounded-2xl text-left flex justify-between items-center transition-all ${
+              activeTable === 'sync' ? 'bg-[#FFCC00] text-[#003366] shadow-lg' : 'bg-white text-slate-400 hover:bg-slate-50'
+            }`}
+          >
+            <span className="font-black uppercase text-xs">Sincronización ☁️</span>
+          </button>
+          
           <div className="mt-8 p-6 bg-amber-50 rounded-3xl border border-amber-100">
              <h4 className="text-[10px] font-black text-amber-800 uppercase mb-2">Seguridad de Datos</h4>
              <p className="text-[9px] text-amber-700 leading-relaxed font-bold">
@@ -88,61 +108,65 @@ export default function DatabaseConsole() {
 
         {/* Visualizador de Datos */}
         <div className="lg:col-span-3 space-y-4">
-          <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden">
-            <div className="p-6 border-b border-slate-50 flex justify-between items-center">
-               <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest">
-                 Contenido de la Tabla: <span className="text-indigo-600">{activeTable.toUpperCase()}</span>
-               </h4>
-               <button 
-                 onClick={() => setEditingRaw(editingRaw ? null : JSON.stringify(currentData, null, 2))}
-                 className="text-[10px] font-black text-indigo-600 uppercase"
-               >
-                 {editingRaw ? 'Ver Tabla' : 'Editar JSON Crudo'}
-               </button>
-            </div>
+          {activeTable === 'sync' ? (
+            <SyncPanel lang={lang} onComplete={() => setActiveTable('employees')} />
+          ) : (
+            <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden">
+              <div className="p-6 border-b border-slate-50 flex justify-between items-center">
+                 <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest">
+                   Contenido de la Tabla: <span className="text-indigo-600">{activeTable.toUpperCase()}</span>
+                 </h4>
+                 <button 
+                   onClick={() => setEditingRaw(editingRaw ? null : JSON.stringify(currentData, null, 2))}
+                   className="text-[10px] font-black text-indigo-600 uppercase"
+                 >
+                   {editingRaw ? 'Ver Tabla' : 'Editar JSON Crudo'}
+                 </button>
+              </div>
 
-            <div className="p-0 overflow-x-auto max-h-[600px] overflow-y-auto">
-              {editingRaw ? (
-                <div className="p-6 space-y-4">
-                  <textarea
-                    value={editingRaw}
-                    onChange={(e) => setEditingRaw(e.target.value)}
-                    className="w-full h-[400px] p-6 font-mono text-[10px] bg-slate-900 text-emerald-400 rounded-2xl border-none outline-none"
-                  />
-                  <div className="flex justify-end gap-3">
-                    <button onClick={() => setEditingRaw(null)} className="px-6 py-3 font-black text-slate-400 uppercase text-[10px]">Cancelar</button>
-                    <button 
-                      onClick={handleRawSave}
-                      className="bg-emerald-500 text-white px-8 py-3 rounded-xl font-black uppercase text-[10px] shadow-lg shadow-emerald-500/20"
-                    >
-                      {saveStatus ? '¡Guardado!' : 'Commit Changes (Guardar)'}
-                    </button>
+              <div className="p-0 overflow-x-auto max-h-[600px] overflow-y-auto">
+                {editingRaw ? (
+                  <div className="p-6 space-y-4">
+                    <textarea
+                      value={editingRaw}
+                      onChange={(e) => setEditingRaw(e.target.value)}
+                      className="w-full h-[400px] p-6 font-mono text-[10px] bg-slate-900 text-emerald-400 rounded-2xl border-none outline-none"
+                    />
+                    <div className="flex justify-end gap-3">
+                      <button onClick={() => setEditingRaw(null)} className="px-6 py-3 font-black text-slate-400 uppercase text-[10px]">Cancelar</button>
+                      <button 
+                        onClick={handleRawSave}
+                        className="bg-emerald-500 text-white px-8 py-3 rounded-xl font-black uppercase text-[10px] shadow-lg shadow-emerald-500/20"
+                      >
+                        {saveStatus ? '¡Guardado!' : 'Commit Changes (Guardar)'}
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <table className="w-full text-left text-[10px]">
-                  <thead className="bg-slate-50 sticky top-0 z-10">
-                    <tr>
-                      {currentData.length > 0 && Object.keys(currentData[0]).map(key => (
-                        <th key={key} className="px-4 py-4 font-black text-slate-400 uppercase border-b">{key}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {currentData.map((row: any, i: number) => (
-                      <tr key={i} className="hover:bg-slate-50/50">
-                        {Object.values(row).map((val: any, j: number) => (
-                          <td key={j} className="px-4 py-3 font-medium text-slate-600 truncate max-w-[200px]">
-                            {typeof val === 'object' ? JSON.stringify(val).substring(0, 30) + '...' : String(val)}
-                          </td>
+                ) : (
+                  <table className="w-full text-left text-[10px]">
+                    <thead className="bg-slate-50 sticky top-0 z-10">
+                      <tr>
+                        {currentData.length > 0 && Object.keys(currentData[0]).map(key => (
+                          <th key={key} className="px-4 py-4 font-black text-slate-400 uppercase border-b">{key}</th>
                         ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {currentData.map((row: any, i: number) => (
+                        <tr key={i} className="hover:bg-slate-50/50">
+                          {Object.values(row).map((val: any, j: number) => (
+                            <td key={j} className="px-4 py-3 font-medium text-slate-600 truncate max-w-[200px]">
+                              {typeof val === 'object' ? JSON.stringify(val).substring(0, 30) + '...' : String(val)}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

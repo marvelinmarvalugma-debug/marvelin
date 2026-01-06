@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Employee, FullEvaluation, BonusStatus, TechnicalCriterion, Department, UserRole, SALARY_APPROVERS } from '../types';
+import { Employee, FullEvaluation, BonusStatus, TechnicalCriterion, Department, UserRole } from '../types';
 import { ATO_CRITERIA, VULCAN_CRITERIA } from '../constants';
 import { VulcanDB } from '../services/storageService';
 import { t, Language } from '../services/translations';
@@ -20,17 +20,17 @@ const MONTHS_EN = ["january", "february", "march", "april", "may", "june", "july
 export default function EvaluationForm({ employee, evaluatorName, initialData, onClose, onSave, lang }: EvaluationFormProps) {
   const [step, setStep] = useState(1);
   const [campo, setCampo] = useState(initialData?.campo || 'CARIÑA');
-  const [mes, setMes] = useState(initialData?.mes || new Date().toLocaleString('es-ES', { month: 'long' }).toLowerCase());
+  
+  // Usar el array MESES para inicializar el mes de forma segura
+  const [mes, setMes] = useState(initialData?.mes || MESES[new Date().getMonth()]);
   const [anio, setAnio] = useState(initialData?.año || new Date().getFullYear().toString());
 
   const user = useMemo(() => VulcanDB.getUser(evaluatorName), [evaluatorName]);
   const isDirector = user?.role === UserRole.Director;
-  
   const isVulcan = employee.department === Department.VULCAN;
 
   const [criteria, setCriteria] = useState<TechnicalCriterion[]>([]);
   const [observaciones, setObservaciones] = useState(initialData?.observaciones || '');
-  const [manualIncrement, setManualIncrement] = useState(initialData?.incrementoSalarial || '');
 
   useEffect(() => {
     if (initialData) {
@@ -44,14 +44,6 @@ export default function EvaluationForm({ employee, evaluatorName, initialData, o
   const totalPuntos = criteria.reduce((acc, curr) => acc + curr.score, 0);
   const promedioFinalNum = totalPuntos > 0 ? parseFloat((totalPuntos / criteria.length).toFixed(2)) : 0;
   const porcentajeDesempeño = (promedioFinalNum / 5) * 100;
-
-  const suggestedIncrement = useMemo(() => {
-    if (!isVulcan) return "0%";
-    if (porcentajeDesempeño >= 98) return "20% o más";
-    if (porcentajeDesempeño >= 88) return "15%";
-    if (porcentajeDesempeño >= 80) return "10%";
-    return "0%";
-  }, [isVulcan, porcentajeDesempeño]);
 
   const handleScoreChange = (id: string, score: number) => {
     setCriteria(prev => prev.map(c => c.id === id ? { ...c, score } : c));
@@ -69,8 +61,7 @@ export default function EvaluationForm({ employee, evaluatorName, initialData, o
   const processEvaluation = () => {
     let finalBonusStatus = initialData?.condicionBono || BonusStatus.PendingAuth;
     if (!initialData) {
-      if (!isVulcan) { if (porcentajeDesempeño < 100) finalBonusStatus = BonusStatus.NotApproved; }
-      else if (porcentajeDesempeño < 80) finalBonusStatus = BonusStatus.NotApproved;
+      if (porcentajeDesempeño < 80) finalBonusStatus = BonusStatus.NotApproved;
     }
 
     const evaluationData: FullEvaluation = {
@@ -81,8 +72,8 @@ export default function EvaluationForm({ employee, evaluatorName, initialData, o
       areaDesempeño: isVulcan ? 'Administrativa' : 'Operativa', 
       criteria, observaciones,
       condicionBono: finalBonusStatus,
-      recomendacionSalarial: "Sugerida",
-      incrementoSalarial: isVulcan ? (manualIncrement || suggestedIncrement) : undefined,
+      recomendacionSalarial: "Evaluación Técnica Registrada",
+      incrementoSalarial: initialData?.incrementoSalarial, 
       totalPuntos, promedioFinal: promedioFinalNum,
       date: initialData?.date || new Date().toISOString().split('T')[0],
       authorizedBy: initialData?.authorizedBy
@@ -94,7 +85,6 @@ export default function EvaluationForm({ employee, evaluatorName, initialData, o
 
   return (
     <div className="bg-white rounded-[40px] shadow-2xl border border-slate-100 overflow-hidden max-w-5xl mx-auto my-4 animate-in fade-in duration-500 print:shadow-none print:border-none print:my-0 print:rounded-none print:w-full">
-      
       <div className="bg-[#003366] p-8 text-white border-b-8 border-[#FFCC00] print:hidden flex justify-between items-center">
         <div className="flex items-center gap-6">
           <div className="bg-white p-3 rounded-xl font-black text-[#003366] text-xl shadow-lg">VULCAN</div>
@@ -114,22 +104,22 @@ export default function EvaluationForm({ employee, evaluatorName, initialData, o
             <div className="bg-slate-50 p-8 rounded-[32px] border-2 border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-8">
                <div className="space-y-2">
                  <label className="text-[10px] font-black text-[#003366] uppercase tracking-widest">{t('location', lang)}</label>
-                 <input value={campo} onChange={e => setCampo(e.target.value.toUpperCase())} className="w-full p-4 bg-white border-2 border-slate-200 rounded-2xl font-black uppercase" />
+                 <input value={campo} onChange={e => setCampo(e.target.value.toUpperCase())} className="w-full p-4 bg-white border-2 border-slate-200 rounded-2xl font-black uppercase outline-none focus:border-[#003366]" />
                </div>
                <div className="grid grid-cols-2 gap-4">
                  <div className="space-y-2">
                    <label className="text-[10px] font-black text-[#003366] uppercase tracking-widest">{t('month', lang)}</label>
-                   <select value={mes} onChange={e => setMes(e.target.value)} className="w-full p-4 bg-white border-2 border-slate-200 rounded-2xl font-black uppercase text-xs">
+                   <select value={mes} onChange={e => setMes(e.target.value)} className="w-full p-4 bg-white border-2 border-slate-200 rounded-2xl font-black uppercase text-xs outline-none focus:border-[#003366]">
                      {MESES.map((m, idx) => <option key={m} value={m}>{lang === 'es' ? m.toUpperCase() : MONTHS_EN[idx].toUpperCase()}</option>)}
                    </select>
                  </div>
                  <div className="space-y-2">
                    <label className="text-[10px] font-black text-[#003366] uppercase tracking-widest">{t('year', lang)}</label>
-                   <input value={anio} onChange={e => setAnio(e.target.value)} disabled={!isDirector} className="w-full p-4 bg-slate-100 border-2 border-slate-200 rounded-2xl font-black text-center" />
+                   <input value={anio} onChange={e => setAnio(e.target.value)} className="w-full p-4 bg-slate-100 border-2 border-slate-200 rounded-2xl font-black text-center outline-none focus:border-[#003366]" />
                  </div>
                </div>
             </div>
-            <button onClick={() => setStep(2)} className="w-full py-5 bg-[#003366] text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl">
+            <button onClick={() => setStep(2)} className="w-full py-5 bg-[#003366] text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl hover:bg-[#002244] transition-all">
               {t('continue', lang)} →
             </button>
           </div>
@@ -152,7 +142,7 @@ export default function EvaluationForm({ employee, evaluatorName, initialData, o
                       <table className="w-full text-left">
                         <tbody className="divide-y divide-slate-100">
                           {group.items.map(c => (
-                            <tr key={c.id} className="hover:bg-slate-50">
+                            <tr key={c.id} className="hover:bg-slate-50 transition-colors">
                               <td className="px-8 py-4 w-2/3">
                                 <p className="font-black text-[#003366] uppercase text-[11px] mb-0.5">{c.name}</p>
                                 <p className="text-[9px] text-slate-400 italic leading-tight">{c.description}</p>
@@ -185,7 +175,7 @@ export default function EvaluationForm({ employee, evaluatorName, initialData, o
                 <table className="w-full text-left">
                   <thead className="bg-[#003366] text-white">
                     <tr>
-                      <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest">{t('technical_matrix', lang)} ATO</th>
+                      <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest">Matriz Técnica ATO</th>
                       <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-center">{t('score', lang)}</th>
                     </tr>
                   </thead>
@@ -233,7 +223,7 @@ export default function EvaluationForm({ employee, evaluatorName, initialData, o
                 disabled={criteria.some(c => c.score === 0)}
                 onClick={() => setStep(3)} 
                 className={`px-12 py-4 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${
-                  criteria.some(c => c.score === 0) ? 'bg-white/5 text-white/10' : 'bg-[#FFCC00] text-[#003366] shadow-xl'
+                  criteria.some(c => c.score === 0) ? 'bg-white/5 text-white/10' : 'bg-[#FFCC00] text-[#003366] shadow-xl hover:scale-105'
                 }`}
               >
                 {t('continue', lang)} →
@@ -249,16 +239,16 @@ export default function EvaluationForm({ employee, evaluatorName, initialData, o
                 <textarea 
                   value={observaciones} 
                   onChange={e => setObservaciones(e.target.value)}
-                  className="w-full h-32 p-6 bg-slate-50 border-2 border-slate-100 rounded-[32px] outline-none focus:border-[#003366] text-sm"
+                  className="w-full h-32 p-6 bg-slate-50 border-2 border-slate-100 rounded-[32px] outline-none focus:border-[#003366] text-sm shadow-inner"
                   placeholder="..."
                 />
              </div>
 
              <div className="flex justify-end gap-3 pt-6">
-                <button onClick={() => setStep(2)} className="px-8 py-4 font-black uppercase text-[10px] text-slate-400">
+                <button onClick={() => setStep(2)} className="px-8 py-4 font-black uppercase text-[10px] text-slate-400 hover:text-[#003366] transition-colors">
                   {lang === 'es' ? 'Volver' : 'Back'}
                 </button>
-                <button onClick={processEvaluation} className="bg-[#003366] text-white px-16 py-5 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] shadow-2xl">
+                <button onClick={processEvaluation} className="bg-[#003366] text-white px-16 py-5 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] shadow-2xl hover:bg-[#002244] transition-all">
                   {initialData ? t('save_changes', lang) : t('finish_reg', lang)}
                 </button>
              </div>
@@ -306,7 +296,7 @@ export default function EvaluationForm({ employee, evaluatorName, initialData, o
                 </table>
 
                 <div className="mb-8">
-                  <h4 className="text-[10px] font-black uppercase mb-3 bg-slate-800 text-white p-2 text-center tracking-widest">I. {lang === 'es' ? 'MATRIZ DE RENDIMIENTO' : 'PERFORMANCE MATRIX'}</h4>
+                  <h4 className="text-[10px] font-black uppercase mb-3 bg-slate-800 text-white p-2 text-center tracking-widest">I. MATRIZ DE RENDIMIENTO</h4>
                   <table className="w-full border-collapse border border-slate-800 text-[9px]">
                     <thead className="bg-slate-100 font-black">
                       <tr>
@@ -348,8 +338,8 @@ export default function EvaluationForm({ employee, evaluatorName, initialData, o
              </div>
 
              <div className="flex justify-center gap-6 mt-10 print:hidden">
-                <button onClick={onClose} className="px-12 py-5 bg-slate-100 text-slate-500 rounded-2xl font-black uppercase text-[10px] tracking-widest">{lang === 'es' ? 'Cerrar' : 'Close'}</button>
-                <button onClick={() => window.print()} className="px-20 py-5 bg-[#003366] text-white rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] shadow-2xl flex items-center gap-3">
+                <button onClick={onClose} className="px-12 py-5 bg-slate-100 text-slate-500 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-slate-200 transition-all">{lang === 'es' ? 'Cerrar' : 'Close'}</button>
+                <button onClick={() => window.print()} className="px-20 py-5 bg-[#003366] text-white rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] shadow-2xl flex items-center gap-3 hover:scale-105 transition-all">
                   🖨️ {t('print_acta', lang)}
                 </button>
              </div>
