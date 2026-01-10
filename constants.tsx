@@ -50,13 +50,11 @@ export const VULCAN_CRITERIA: CategorizedCriterion[] = [
   { id: 'v_cul_4', category: 'Cumplimiento de la cultura organizacional', name: 'Ética profesional', description: 'Actúa con honestidad y en conformidad con los principios éticos de la empresa' },
 ];
 
-const DEFAULT_KPIS = [
+export const DEFAULT_KPIS = [
   { id: 'k1', name: 'Productividad', score: 0, weight: 40 },
   { id: 'k2', name: 'Calidad Operativa', score: 0, weight: 30 },
   { id: 'k3', name: 'Seguridad SIHOA', score: 0, weight: 30 }
 ];
 
-export const INITIAL_EMPLOYEES: Employee[] = [
-  { id: 'vul1', idNumber: '14.462.190', name: 'Jacquelin Naim', role: 'Gerente Administrativa', department: Department.VULCAN, photo: 'https://picsum.photos/seed/14462190/200/200', managerName: 'Xuezhi Jin', managerRole: 'Dirección General', lastEvaluation: 'Pendiente', summary: '', kpis: DEFAULT_KPIS },
-  { id: 'ato1', idNumber: '16.250.905', name: 'Nelson Marcano', role: 'Jefe de la Unidad de Producción', department: Department.ATO, photo: 'https://picsum.photos/seed/nelson/200/200', managerName: 'Hector Quezada', managerRole: 'Superintendente', lastEvaluation: 'Pendiente', summary: '', kpis: DEFAULT_KPIS },
-];
+// Se deja vacío para que no se restauren empleados por defecto al limpiar la DB
+export const INITIAL_EMPLOYEES: Employee[] = [];

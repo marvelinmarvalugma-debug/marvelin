@@ -114,6 +114,7 @@ export const translations = {
     hr_sign: "Firma de Coordinación HR",
     op_manager_sign: "Firma de Gerencia Operativa",
     export_pdf: "Exportar Reporte Mensual (PDF)",
+    export_excel: "Exportar a Excel (.csv)",
     
     // Sync Panel
     sync_title: "Sincronización de Base de Datos",
@@ -240,6 +241,7 @@ export const translations = {
     hr_sign: "HR Coordination Signature",
     op_manager_sign: "Operations Management Signature",
     export_pdf: "Export Monthly Report (PDF)",
+    export_excel: "Export to Excel (.csv)",
     
     // Sync Panel
     sync_title: "Database Synchronization",

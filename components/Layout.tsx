@@ -30,20 +30,42 @@ const Layout: React.FC<LayoutProps> = ({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   const user = evaluatorName ? VulcanDB.getUser(evaluatorName) : null;
-  const isDirector = user?.role === UserRole.Director;
+  const isGerente = user?.role === UserRole.Gerente;
+  const isRRHH = user?.role === UserRole.RRHH;
+  
+  // List of users who should NOT see the Database menu regardless of role
+  const blockedFromDB = [
+    'daniela alfonzo',
+    'xuezhi jin',
+    'aurelio cuya',
+    'jacquelin naim',
+    'jacqueline naim'
+  ];
+  
+  const normalizedName = evaluatorName?.toLowerCase().trim() || "";
+  const isRestrictedFromDB = blockedFromDB.includes(normalizedName);
+  const isRRHHRestricted = normalizedName === 'daniela alfonzo';
+  
+  const hasHighAccess = isGerente || isRRHH;
 
-  // Restricción específica para Jacquelin Naim (variaciones de nombre incluidas)
-  const isJacquelin = evaluatorName?.toLowerCase().trim() === 'jacquelin naim' || 
-                      evaluatorName?.toLowerCase().trim() === 'jacqueline naim';
-
+  // Construcción dinámica del menú según el rol
   const navItems = [
     { id: 'dashboard', label: t('dashboard', lang), icon: '📊' },
-    { id: 'employees', label: t('personnel', lang), icon: '👥' },
-    { id: 'evaluations', label: isDirector ? t('bonus_approval', lang) : t('performance_matrix', lang), icon: isDirector ? '✅' : '📝' },
   ];
 
-  // Solo los Directores que no sean Jacquelin pueden ver la consola de base de datos
-  if (isDirector && !isJacquelin) {
+  // Se quita la sección de personal para RRHH (Daniela Alfonzo) según solicitud
+  if (!isRRHHRestricted) {
+    navItems.push({ id: 'employees', label: t('personnel', lang), icon: '👥' });
+  }
+
+  navItems.push({ 
+    id: 'evaluations', 
+    label: isRRHH ? "Gestión Humana" : (isGerente ? t('bonus_approval', lang) : t('performance_matrix', lang)), 
+    icon: hasHighAccess ? '✅' : '📝' 
+  });
+
+  // La base de datos solo es visible para Gerentes o RRHH que no estén en la lista de restricción
+  if (hasHighAccess && !isRestrictedFromDB) {
     navItems.push({ id: 'database', label: t('database', lang), icon: '🗄️' });
   }
 
@@ -93,9 +115,9 @@ const Layout: React.FC<LayoutProps> = ({
 
         {evaluatorName && (
           <div className="p-8 border-t border-white/5 bg-[#001326]">
-            <div className={`p-5 rounded-3xl border-2 ${isDirector ? 'bg-indigo-900/30 border-[#FFCC00]/50' : 'bg-white/5 border-white/10'}`}>
+            <div className={`p-5 rounded-3xl border-2 ${hasHighAccess ? 'bg-indigo-900/30 border-[#FFCC00]/50' : 'bg-white/5 border-white/10'}`}>
               <div className="flex items-center">
-                <div className={`shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center text-sm font-black ${isDirector ? 'bg-[#FFCC00] text-[#003366]' : 'bg-[#003366] text-white shadow-lg'}`}>
+                <div className={`shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center text-sm font-black ${hasHighAccess ? 'bg-[#FFCC00] text-[#003366]' : 'bg-[#003366] text-white shadow-lg'}`}>
                   {evaluatorName.split(' ')[0][0]}
                 </div>
                 <div className="ml-4 overflow-hidden">
@@ -126,13 +148,12 @@ const Layout: React.FC<LayoutProps> = ({
             <div>
               <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] leading-none mb-1.5">{activeTab}</h2>
               <p className="text-base lg:text-xl font-black text-slate-800 leading-tight uppercase tracking-tight">
-                {isDirector ? t('bonus_approval', lang) : t('performance_matrix', lang)}
+                {isRRHH ? "Consolidado de RRHH" : (isGerente ? t('bonus_approval', lang) : t('performance_matrix', lang))}
               </p>
             </div>
           </div>
           
           <div className="flex items-center gap-4 lg:gap-8">
-            {/* Language Toggle */}
             <button 
               onClick={onLangToggle}
               className="flex items-center gap-2 bg-slate-50 border-2 border-slate-100 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-[#003366] hover:border-[#003366] transition-all"
@@ -150,13 +171,15 @@ const Layout: React.FC<LayoutProps> = ({
               </div>
             </div>
             
-            <button 
-              onClick={onDownloadReports}
-              className="bg-[#003366] text-white px-5 lg:px-8 py-3 rounded-2xl font-black text-[10px] lg:text-xs hover:bg-[#002244] transition-all shadow-2xl shadow-blue-900/20 uppercase tracking-[0.2em]"
-            >
-              <span className="lg:inline hidden">{t('payroll_summary', lang)}</span>
-              <span className="lg:hidden">REPORTE</span>
-            </button>
+            {hasHighAccess && (
+              <button 
+                onClick={onDownloadReports}
+                className="bg-[#003366] text-white px-5 lg:px-8 py-3 rounded-2xl font-black text-[10px] lg:text-xs hover:bg-[#002244] transition-all shadow-2xl shadow-blue-900/20 uppercase tracking-[0.2em]"
+              >
+                <span className="lg:inline hidden">{t('payroll_summary', lang)}</span>
+                <span className="lg:hidden">REPORTE</span>
+              </button>
+            )}
           </div>
         </header>
 

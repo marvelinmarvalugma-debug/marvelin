@@ -7,17 +7,18 @@ interface AddEmployeeFormProps {
   onAdd: (employee: Omit<Employee, 'id' | 'kpis' | 'lastEvaluation' | 'summary'>) => void;
   onCancel: () => void;
   lang: Language;
+  evaluatorName: string;
 }
 
-const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({ onAdd, onCancel, lang }) => {
+const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({ onAdd, onCancel, lang, evaluatorName }) => {
   const [formData, setFormData] = useState({
     idNumber: '',
     name: '',
     role: '',
     department: Department.ATO,
     photo: `https://picsum.photos/seed/${Math.random()}/200/200`,
-    managerName: 'Administrador Vulcan',
-    managerRole: 'Supervisor de Area'
+    managerName: evaluatorName,
+    managerRole: 'Supervisor'
   });
 
   const handleSubmit = (e: React.FormEvent) => {

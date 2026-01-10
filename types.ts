@@ -6,7 +6,8 @@ export enum Department {
 
 export enum UserRole {
   Supervisor = 'Supervisor',
-  Director = 'Director'
+  Gerente = 'Gerente',
+  RRHH = 'RRHH'
 }
 
 export interface User {
@@ -100,9 +101,11 @@ export const AUTHORIZED_EVALUATORS = [
   "Ryan Song",
   "Ait",
   "Jaime Wang",
-  "Grisélida Gibbs"
+  "Grisélida Gibbs",
+  "Daniela Alfonzo"
 ];
 
 // Gerentes autorizados para aprobación salarial y bonos
-export const SALARY_APPROVERS = ["Jacquelin Naim", "Aurelio Cuya", "Xuezhi Jin"];
+// Se incluye a Andy Song para otorgarle el rol de Gerente y plenos poderes de carga de personal
+export const SALARY_APPROVERS = ["Jacquelin Naim", "Aurelio Cuya", "Xuezhi Jin", "Andy Song"];
 export const BONUS_APPROVER = "Jacquelin Naim";

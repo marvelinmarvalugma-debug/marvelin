@@ -1,5 +1,7 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
+// @google/genai guidelines followed for integration where applicable.
+import { GoogleGenAI } from "@google/genai";
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
 import EmployeeList from './components/EmployeeList';
@@ -13,7 +15,6 @@ import { VulcanDB } from './services/storageService';
 import { t, Language } from './services/translations';
 import { 
   Employee, FullEvaluation, Department, 
-  SALARY_APPROVERS, BonusStatus, 
   User, UserRole 
 } from './types';
 
@@ -25,76 +26,65 @@ const App: React.FC = () => {
   
   const [activeTab, setActiveTab] = useState('dashboard');
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [evaluationsHistory, setEvaluationsHistory] = useState<FullEvaluation[]>([]);
+  const [evaluations, setEvaluations] = useState<FullEvaluation[]>([]);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
-  const [evaluatingEmployee, setEvaluatingEmployee] = useState<Employee | null>(null);
-  const [editingEvaluation, setEditingEvaluation] = useState<FullEvaluation | null>(null);
+  const [isEvaluating, setIsEvaluating] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
+  const [editingEvaluation, setEditingEvaluation] = useState<FullEvaluation | undefined>(undefined);
   const [isAddingEmployee, setIsAddingEmployee] = useState(false);
-  const [showReportsModal, setShowReportsModal] = useState(false);
+  const [isReportOpen, setIsReportOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
 
+  // Initialize data on mount
   useEffect(() => {
-    const initApp = async () => {
+    const init = async () => {
       setIsSyncing(true);
-      await VulcanDB.initialize();
-      const loadedEmps = VulcanDB.getEmployees();
-      setEmployees(loadedEmps);
-      setEvaluationsHistory(VulcanDB.getEvaluations());
-      setIsInitialized(true);
-      setIsSyncing(false);
-    };
-    initApp();
-
-    const cleanup = VulcanDB.onSync((payload) => {
-      setIsSyncing(true);
-      if (payload.type === 'SYNC_EMPLOYEES') setEmployees(payload.data);
-      if (payload.type === 'SYNC_EVALUATIONS') setEvaluationsHistory(payload.data);
-      if (payload.type === 'SYNC_USERS') {
-        if (currentUser) {
-          const updated = (payload.data as User[]).find(u => u.username === currentUser.username);
-          if (updated) setCurrentUser(updated);
-        }
+      try {
+        await VulcanDB.initialize();
+      } catch (err) {
+        console.error("App: Fallo en inicialización de DB", err);
+      } finally {
+        const emps = VulcanDB.getEmployees();
+        const evals = VulcanDB.getEvaluations();
+        setEmployees(emps);
+        setEvaluations(evals);
+        setIsInitialized(true);
+        setIsSyncing(false);
       }
-      setTimeout(() => setIsSyncing(false), 800);
+    };
+    init();
+
+    const unsubscribe = VulcanDB.onSync((payload) => {
+      if (payload.type === 'SYNC_EMPLOYEES') {
+        setEmployees([...payload.data]);
+      }
+      if (payload.type === 'SYNC_EVALUATIONS') {
+        setEvaluations([...payload.data]);
+      }
     });
-    return () => { if (cleanup) cleanup(); };
-  }, [currentUser]);
 
-  useEffect(() => {
-    localStorage.setItem('vulcan_lang', lang);
-  }, [lang]);
-
-  const handleLoginSuccess = (user: User) => {
-    setCurrentUser(user);
-    setIsAuthenticated(true);
-  };
-
-  const isDirector = currentUser?.role === UserRole.Director;
-  
-  const isAuthorizedManager = useMemo(() => 
-    currentUser && SALARY_APPROVERS.some(name => currentUser.username.toLowerCase().trim() === name.toLowerCase().trim()), 
-    [currentUser]
-  );
-  
-  const canUserManagePersonnel = isAuthenticated; 
-
-  const canUserEvaluatePerformance = useMemo(() => {
-    if (!currentUser) return false;
-    return !isAuthorizedManager; 
-  }, [currentUser, isAuthorizedManager]);
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, []);
 
   const filteredEmployees = useMemo(() => {
     if (!currentUser) return [];
-    if (isDirector) return employees;
-    const userLower = currentUser.username.toLowerCase().trim();
-    return employees.filter(emp => emp.managerName?.toLowerCase().trim() === userLower);
-  }, [employees, currentUser, isDirector]);
-
-  const mySubordinates = useMemo(() => {
-    if (!currentUser) return [];
-    const userLower = currentUser.username.toLowerCase().trim();
-    return employees.filter(emp => emp.managerName?.toLowerCase().trim() === userLower);
+    if (currentUser.role === UserRole.Gerente || currentUser.role === UserRole.RRHH) return employees;
+    return employees.filter(emp => emp.managerName?.toLowerCase().trim() === currentUser.username.toLowerCase().trim());
   }, [employees, currentUser]);
+
+  const filteredEvaluations = useMemo(() => {
+    if (!currentUser) return [];
+    if (currentUser.role === UserRole.Gerente || currentUser.role === UserRole.RRHH) return evaluations;
+    const allowedIds = new Set(filteredEmployees.map(e => e.id));
+    return evaluations.filter(ev => allowedIds.has(ev.employeeId));
+  }, [evaluations, filteredEmployees, currentUser]);
+
+  const handleLogin = (user: User) => {
+    setCurrentUser(user);
+    setIsAuthenticated(true);
+  };
 
   const handleLogout = () => {
     setCurrentUser(null);
@@ -102,255 +92,339 @@ const App: React.FC = () => {
     setActiveTab('dashboard');
   };
 
-  const normalizeID = (id: string) => id.replace(/[^a-zA-Z0-9]/g, '').trim();
+  const toggleLang = () => {
+    const newLang = lang === 'es' ? 'en' : 'es';
+    setLang(newLang);
+    localStorage.setItem('vulcan_lang', newLang);
+  };
 
   const handleSaveEvaluation = async (evaluation: FullEvaluation) => {
     try {
-        const finalEvaluation = { ...evaluation, id: evaluation.id || Math.random().toString(36).substr(2, 9) };
-        const updatedHistory = [...evaluationsHistory.filter(ev => ev.id !== finalEvaluation.id), finalEvaluation];
-        
-        setEvaluationsHistory(updatedHistory);
-        await VulcanDB.saveEvaluations(updatedHistory);
-        
-        const newScore = Math.round(finalEvaluation.promedioFinal * 20);
-        const updatedEmployees = employees.map(emp => 
-          emp.id === finalEvaluation.employeeId 
-            ? { 
-                ...emp, 
-                lastEvaluation: `${finalEvaluation.mes} ${finalEvaluation.año}`.toLowerCase(),
-                kpis: emp.kpis.map(k => ({ ...k, score: newScore }))
-              } 
-            : emp
-        );
-        
-        setEmployees(updatedEmployees);
-        await VulcanDB.saveEmployees(updatedEmployees);
-    } catch (e) {
-        alert("Error al guardar evaluación: " + (e as Error).message);
+      const evalId = evaluation.id || Math.random().toString(36).substr(2, 9);
+      const evaluationWithId = { ...evaluation, id: evalId };
+      const newEvaluations = editingEvaluation 
+        ? evaluations.map(ev => ev.id === evaluation.id ? evaluationWithId : ev)
+        : [...evaluations, evaluationWithId];
+      
+      setEvaluations(newEvaluations);
+      await VulcanDB.saveEvaluations(newEvaluations);
+      
+      const updatedEmployees = employees.map(emp => {
+        if (emp.id === evaluation.employeeId) {
+          return { ...emp, lastEvaluation: `${evaluation.mes} ${evaluation.año}`.toLowerCase() };
+        }
+        return emp;
+      });
+      setEmployees(updatedEmployees);
+      await VulcanDB.saveEmployees(updatedEmployees);
+      
+      setIsEvaluating(false);
+      setEditingEvaluation(undefined);
+      setSelectedEmployee(null);
+    } catch (error) {
+      console.error("Critical error saving evaluation:", error);
+      setIsEvaluating(false);
     }
   };
 
-  const handleDeleteEmployee = async (id: string) => {
-    setIsSyncing(true);
-    try {
-      const updated = await VulcanDB.deleteEmployee(id);
-      setEmployees(updated);
-    } catch (e) {
-      alert("Error al eliminar: " + (e as Error).message);
+  const handleAddEmployee = async (empData: any) => {
+    // Verificación de duplicado por cédula (idNumber)
+    const cleanId = empData.idNumber.replace(/[\.\s,]/g, '').toLowerCase();
+    const existingIndex = employees.findIndex(e => e.idNumber.replace(/[\.\s,]/g, '').toLowerCase() === cleanId);
+
+    if (existingIndex !== -1) {
+      const msg = lang === 'es' 
+        ? `La cédula ${empData.idNumber} ya está registrada a nombre de ${employees[existingIndex].name}. ¿Desea actualizar su información?` 
+        : `ID Number ${empData.idNumber} is already registered to ${employees[existingIndex].name}. Update information?`;
+      
+      if (window.confirm(msg)) {
+        const updatedList = [...employees];
+        updatedList[existingIndex] = { 
+          ...updatedList[existingIndex], 
+          ...empData,
+          id: updatedList[existingIndex].id // Mantener el ID interno original
+        };
+        setEmployees(updatedList);
+        await VulcanDB.saveEmployees(updatedList);
+      }
+      setIsAddingEmployee(false);
+      return;
     }
-    setIsSyncing(false);
+
+    const newEmp: Employee = {
+      ...empData,
+      id: Math.random().toString(36).substr(2, 9),
+      lastEvaluation: 'Pendiente',
+      summary: '',
+      kpis: [
+        { id: 'k1', name: 'Productividad', score: 0, weight: 40 },
+        { id: 'k2', name: 'Calidad Operativa', score: 0, weight: 30 },
+        { id: 'k3', name: 'Seguridad SIHOA', score: 0, weight: 30 }
+      ]
+    };
+    
+    setEmployees(prev => {
+      const updated = [...prev, newEmp];
+      VulcanDB.saveEmployees(updated);
+      return updated;
+    });
+    setIsAddingEmployee(false);
   };
 
-  const handleClearAllEmployees = async () => {
-    setIsSyncing(true);
+  const handleDeleteEmployee = useCallback(async (id: string) => {
+    if (!id || !window.confirm(t('confirm_delete', lang))) return;
     try {
-      setEmployees([]);
+      const updatedList = await VulcanDB.deleteEmployee(id);
+      setEmployees([...updatedList]);
+      setEvaluations(prev => prev.filter(ev => ev.employeeId !== id));
+      setSelectedEmployee(prev => (prev?.id === id ? null : prev));
+    } catch (error) {
+      console.error("Error al eliminar:", error);
+    }
+  }, [lang]);
+
+  const handleClearAll = async () => {
+    if (window.confirm(t('confirm_clear_all', lang))) {
       await VulcanDB.saveEmployees([]);
-    } catch (e) {
-      alert("Error al limpiar nómina: " + (e as Error).message);
+      await VulcanDB.saveEvaluations([]);
+      setEmployees([]);
+      setEvaluations([]);
     }
-    setIsSyncing(false);
   };
 
   const handleBulkAdd = async (data: string, type: 'ato' | 'vulcan') => {
-    setIsSyncing(true);
-    try {
-        const rows = data.split('\n').filter(r => r.trim());
-        const newEmps: Employee[] = [];
-        let skippedCount = 0;
+    const lines = data.split('\n').filter(l => l.trim().length > 0);
+    if (lines.length === 0) return;
 
-        rows.forEach(row => {
-          const parts = row.split(/[\t,;]/).map(p => p.trim());
-          if (parts.length < 2) return;
+    const processedEmps: Employee[] = [];
+    let addedCount = 0;
+    let updatedCount = 0;
 
-          const rawId = parts[0] || 'N/A';
-          const normId = normalizeID(rawId);
-          
-          if (newEmps.some(e => normalizeID(e.idNumber) === normId)) {
-            skippedCount++;
-          } else {
-            newEmps.push({
-              id: Math.random().toString(36).substr(2, 9),
-              idNumber: rawId,
-              name: parts[1] || 'N/A',
-              role: parts[2] || 'Personal',
-              department: type.toUpperCase(),
-              photo: `https://picsum.photos/seed/${normId || Math.random()}/200/200`,
-              managerName: parts[4] || currentUser?.username || 'Administrador',
-              managerRole: 'Supervisor de Area',
-              lastEvaluation: 'Pendiente',
-              summary: '',
-              kpis: [
-                { id: 'k1', name: 'Productividad', score: 0, weight: 40 },
-                { id: 'k2', name: 'Calidad Operativa', score: 0, weight: 30 },
-                { id: 'k3', name: 'Seguridad SIHOA', score: 0, weight: 30 }
-              ]
-            });
-          }
-        });
+    lines.forEach(line => {
+      let parts = line.split('\t');
+      if (parts.length < 2) parts = line.split(';');
+      if (parts.length < 2) parts = line.split(',');
+      if (parts.length < 2) parts = line.split(/\s{2,}/);
 
-        if (newEmps.length === 0) {
-          alert(lang === 'es' ? "No se detectaron datos válidos para la carga." : "No valid data detected for loading.");
-          setIsSyncing(false);
-          return;
-        }
+      const cleaned = parts.map(p => p.trim());
 
-        // REEMPLAZAR (BLANQUEAR) la nómina actual con los nuevos registros
-        setEmployees(newEmps);
-        await VulcanDB.saveEmployees(newEmps);
+      if (cleaned.length < 2 || !cleaned[0] || !cleaned[1]) return;
+
+      const isHeader = ['cedula', 'cédula', 'id', 'nro', 'nombre'].some(k => cleaned[0].toLowerCase().includes(k) || cleaned[1].toLowerCase().includes(k));
+      if (isHeader) return;
+
+      const managerName = (currentUser?.role === UserRole.Supervisor || !cleaned[4]) 
+        ? (currentUser?.username || 'Xuezhi Jin') 
+        : cleaned[4];
+
+      processedEmps.push({
+        id: Math.random().toString(36).substr(2, 9),
+        idNumber: cleaned[0],
+        name: cleaned[1],
+        role: cleaned[2] || 'TRABAJADOR',
+        department: type === 'ato' ? Department.ATO : Department.VULCAN,
+        photo: `https://picsum.photos/seed/${cleaned[0].replace(/\D/g, '') || 'default'}/200/200`,
+        managerName: managerName,
+        managerRole: currentUser?.role === UserRole.Supervisor ? 'Supervisor' : 'Gerente',
+        lastEvaluation: 'Pendiente',
+        summary: '',
+        kpis: [
+          { id: 'k1', name: 'Productividad', score: 0, weight: 40 },
+          { id: 'k2', name: 'Calidad Operativa', score: 0, weight: 30 },
+          { id: 'k3', name: 'Seguridad SIHOA', score: 0, weight: 30 }
+        ]
+      });
+    });
+
+    if (processedEmps.length === 0) {
+      alert(lang === 'es' ? "No se pudieron procesar los datos." : "Could not process data.");
+      return;
+    }
+
+    setEmployees(prev => {
+      const newList = [...prev];
+      processedEmps.forEach(newEmp => {
+        const cleanId = newEmp.idNumber.replace(/[\.\s,]/g, '').toLowerCase();
+        const idx = newList.findIndex(e => e.idNumber.replace(/[\.\s,]/g, '').toLowerCase() === cleanId);
         
-        alert(lang === 'es' 
-          ? `¡Blanqueo y Carga completada! Agregados: ${newEmps.length}. Se eliminó la nómina anterior.` 
-          : `Wipe and Load completed! Added: ${newEmps.length}. Previous payroll was cleared.`);
-    } catch (e) {
-        alert("Error en la carga masiva: " + (e as Error).message);
-    }
-    setIsSyncing(false);
+        if (idx !== -1) {
+          // Si ya existe por cédula, actualizamos conservando el ID interno original
+          newList[idx] = { 
+            ...newList[idx], 
+            ...newEmp, 
+            id: newList[idx].id // CRÍTICO: Preservar el ID original para no romper el historial
+          };
+          updatedCount++;
+        } else {
+          newList.push(newEmp);
+          addedCount++;
+        }
+      });
+
+      VulcanDB.saveEmployees(newList);
+      alert(lang === 'es' ? `Carga exitosa: ${addedCount} nuevos, ${updatedCount} actualizados.` : `Load success: ${addedCount} new, ${updatedCount} updated.`);
+      return newList;
+    });
   };
 
-  const renderContent = () => {
-    if (isAddingEmployee) return <AddEmployeeForm lang={lang} onAdd={async (data) => {
-      const normNew = normalizeID(data.idNumber);
-      const exists = employees.some(e => normalizeID(e.idNumber) === normNew);
-      if (exists) {
-        alert(lang === 'es' 
-          ? `Error: El empleado con cédula ${data.idNumber} ya se encuentra registrado.` 
-          : `Error: Employee with ID ${data.idNumber} is already registered.`);
-        return;
-      }
+  const startEvaluation = (emp: Employee) => {
+    setSelectedEmployee(emp);
+    setIsEvaluating(true);
+    setIsPrinting(false);
+  };
 
-      try {
-          const newEmployees = [{ ...data, id: Math.random().toString(36).substr(2, 9), kpis: [
-            { id: 'k1', name: 'Productividad', score: 0, weight: 40 },
-            { id: 'k2', name: 'Calidad Operativa', score: 0, weight: 30 },
-            { id: 'k3', name: 'Seguridad SIHOA', score: 0, weight: 30 }
-          ], lastEvaluation: 'Pendiente', summary: '' }, ...employees];
-          setEmployees(newEmployees);
-          await VulcanDB.saveEmployees(newEmployees);
-          setIsAddingEmployee(false);
-      } catch (e) {
-          alert("Error al registrar empleado: " + (e as Error).message);
-      }
-    }} onCancel={() => setIsAddingEmployee(false)} />;
-
-    if ((evaluatingEmployee || editingEvaluation) && canUserEvaluatePerformance) return (
-      <EvaluationForm 
-        employee={evaluatingEmployee || employees.find(e => e.id === editingEvaluation?.employeeId)!} 
-        evaluatorName={currentUser?.username || ''} 
-        initialData={editingEvaluation || undefined}
-        onClose={() => { setEvaluatingEmployee(null); setEditingEvaluation(null); setSelectedEmployee(null); }} 
-        onSave={handleSaveEvaluation} 
-        lang={lang}
-      />
-    );
-    
-    if (selectedEmployee) return (
-      <EmployeeDetails 
-        employee={selectedEmployee} 
-        evaluations={evaluationsHistory} 
-        onBack={() => setSelectedEmployee(null)} 
-        onEvaluate={canUserEvaluatePerformance ? (emp) => { setSelectedEmployee(null); setEvaluatingEmployee(emp); } : undefined}
-        onEditEvaluation={canUserEvaluatePerformance ? (evaluation) => { setSelectedEmployee(null); setEditingEvaluation(evaluation); } : undefined}
-        currentUserRole={currentUser?.role} 
-        lang={lang}
-      />
-    );
-
-    switch (activeTab) {
-      case 'dashboard': return <Dashboard employees={filteredEmployees} lang={lang} />;
-      case 'employees': return (
-        <EmployeeList 
-          employees={filteredEmployees} 
-          onSelect={setSelectedEmployee} 
-          onAddNew={canUserManagePersonnel ? () => setIsAddingEmployee(true) : () => {}} 
-          onDelete={canUserManagePersonnel ? handleDeleteEmployee : () => {}}
-          onClearAll={canUserManagePersonnel ? handleClearAllEmployees : () => {}}
-          onBulkAdd={canUserManagePersonnel ? handleBulkAdd : undefined} 
-          isReadOnly={!canUserManagePersonnel} 
-          lang={lang}
-        />
-      );
-      case 'database': return <DatabaseConsole lang={lang} />;
-      case 'evaluations':
-        return (
-          <div className="space-y-12">
-            {isAuthorizedManager ? (
-              <div className="bg-[#001a33] p-12 rounded-[40px] text-white shadow-2xl border-b-8 border-[#FFCC00] text-center max-w-4xl mx-auto animate-in fade-in duration-500">
-                <div className="text-6xl mb-6">🛡️</div>
-                <h3 className="text-3xl font-black uppercase tracking-tighter">Panel de Aprobación de Gerencia</h3>
-                <p className="text-[#FFCC00] text-sm font-black uppercase tracking-[0.2em] mt-6 max-w-lg mx-auto leading-relaxed">
-                  Bienvenido, {currentUser?.username}. Aquí puede revisar los resultados técnicos cargados por supervisores y asignar los incrementos salariales correspondientes.
-                </p>
-                <div className="mt-12 flex justify-center gap-4">
-                  <button 
-                    onClick={() => setShowReportsModal(true)}
-                    className="bg-[#FFCC00] text-[#003366] px-12 py-5 rounded-3xl font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl text-xs"
-                  >
-                    Abrir Reporte de Nómina y Aprobaciones
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="bg-white p-8 rounded-[32px] border-l-8 border-[#003366] shadow-sm">
-                <h3 className="text-lg font-black uppercase text-slate-800">{lang === 'es' ? 'Mis Subordinados' : 'My Direct Reports'}</h3>
-                {mySubordinates.length === 0 ? (
-                  <div className="text-center py-20 border-2 border-dashed border-slate-100 rounded-[32px] mt-8">
-                    <p className="text-slate-300 font-black uppercase text-[10px] tracking-widest">No tiene personal asignado para evaluación técnica</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
-                    {mySubordinates.map(emp => (
-                        <div key={emp.id} className="bg-slate-50 p-6 rounded-[32px] border-2 border-slate-100 hover:border-[#003366] transition-all group shadow-sm">
-                          <div className="flex items-center gap-4 mb-6">
-                              <img src={emp.photo} className="w-14 h-14 rounded-2xl grayscale group-hover:grayscale-0 transition-all shadow-md" />
-                              <div>
-                                <p className="font-black text-xs uppercase text-[#003366] leading-none mb-1.5">{emp.name}</p>
-                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{emp.role}</p>
-                              </div>
-                          </div>
-                          <button onClick={() => setEvaluatingEmployee(emp)} className="w-full py-4 bg-[#003366] text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-[#002244] hover:shadow-lg active:scale-95 transition-all">
-                              {t('evaluar_ahora', lang) || "Realizar Evaluación Técnica"}
-                          </button>
-                        </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        );
-      default: return <Dashboard employees={filteredEmployees} lang={lang} />;
+  const handlePrintEvaluation = (ev: FullEvaluation) => {
+    const emp = employees.find(e => e.id === ev.employeeId);
+    if (emp) {
+      setSelectedEmployee(emp);
+      setEditingEvaluation(ev);
+      setIsEvaluating(true);
+      setIsPrinting(true);
     }
   };
 
-  if (!isInitialized) {
-    return (
-      <div className="h-screen w-screen bg-[#001a33] flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-4xl font-black text-white tracking-tighter animate-pulse">VULCAN<span className="text-[#FFCC00]">HR</span></h1>
-          <p className="text-[#FFCC00] text-[10px] font-black uppercase tracking-[0.3em] mt-4">Sincronizando con la nube...</p>
-        </div>
-      </div>
-    );
-  }
+  const isGerente = currentUser?.role === UserRole.Gerente;
+  const isRRHH = currentUser?.role === UserRole.RRHH;
 
-  if (!currentUser || !isAuthenticated) {
-    return <LoginPage onLogin={handleLoginSuccess} lang={lang} />;
-  }
+  if (!isInitialized) return <div className="h-screen flex items-center justify-center bg-[#001a33] text-white font-black uppercase tracking-widest animate-pulse">CARGANDO VULCAN HR...</div>;
+  if (!isAuthenticated) return <LoginPage onLogin={handleLogin} lang={lang} />;
 
   return (
     <Layout 
       activeTab={activeTab} 
-      setActiveTab={setActiveTab} 
-      onDownloadReports={() => setShowReportsModal(true)} 
-      evaluatorName={currentUser.username} 
-      onChangeEvaluator={handleLogout} 
+      setActiveTab={setActiveTab}
+      onDownloadReports={() => setIsReportOpen(true)}
+      evaluatorName={currentUser?.username}
+      onChangeEvaluator={handleLogout}
       isSyncing={isSyncing}
       lang={lang}
-      onLangToggle={() => setLang(prev => prev === 'es' ? 'en' : 'es')}
+      onLangToggle={toggleLang}
     >
-      {renderContent()}
-      {showReportsModal && <MonthlyReportModal evaluations={evaluationsHistory} employees={employees} onClose={() => setShowReportsModal(false)} currentUserRole={currentUser?.role} currentUserUsername={currentUser?.username} lang={lang} />}
+      {activeTab === 'dashboard' && <Dashboard employees={filteredEmployees} lang={lang} />}
+      
+      {activeTab === 'employees' && (
+        selectedEmployee && !isEvaluating ? (
+          <EmployeeDetails 
+            employee={selectedEmployee} 
+            evaluations={filteredEvaluations}
+            onBack={() => setSelectedEmployee(null)}
+            onEvaluate={isRRHH ? undefined : startEvaluation}
+            onEditEvaluation={isRRHH ? undefined : (ev) => { setEditingEvaluation(ev); setIsEvaluating(true); setIsPrinting(false); }}
+            onPrintEvaluation={handlePrintEvaluation}
+            onDelete={handleDeleteEmployee}
+            currentUserRole={currentUser?.role}
+            lang={lang}
+          />
+        ) : (
+          <EmployeeList 
+            employees={filteredEmployees} 
+            onSelect={setSelectedEmployee}
+            onAddNew={() => setIsAddingEmployee(true)}
+            onDelete={handleDeleteEmployee}
+            onClearAll={handleClearAll}
+            onBulkAdd={handleBulkAdd}
+            onEvaluate={isRRHH ? undefined : startEvaluation}
+            currentUserRole={currentUser?.role}
+            lang={lang}
+          />
+        )
+      )}
+
+      {activeTab === 'evaluations' && (
+        (isGerente || isRRHH) ? (
+          <div className="text-center py-20 bg-white rounded-[40px] shadow-sm border border-slate-100 animate-in slide-in-from-bottom-4">
+            <div className="mb-6 text-6xl">📊</div>
+            <h3 className="text-2xl font-black text-[#003366] uppercase mb-4 tracking-tight">
+              {isRRHH ? "Consolidado de Gestión Humana" : t('approval_title', lang)}
+            </h3>
+            <p className="text-slate-400 mb-8 max-w-md mx-auto text-sm font-bold uppercase">
+              {isRRHH ? "Viendo todas las evaluaciones y ponderaciones de gerencia." : t('approval_desc', lang)}
+            </p>
+            <div className="flex justify-center gap-4">
+              <button 
+                onClick={() => setIsReportOpen(true)}
+                className="bg-[#003366] text-white px-10 py-5 rounded-2xl font-black uppercase text-xs shadow-2xl hover:scale-105 active:scale-95 transition-all tracking-[0.2em]"
+              >
+                {t('payroll_summary', lang)}
+              </button>
+              <button 
+                onClick={() => setActiveTab('employees')}
+                className="bg-white border-2 border-[#003366] text-[#003366] px-10 py-5 rounded-2xl font-black uppercase text-xs shadow-xl hover:scale-105 active:scale-95 transition-all tracking-[0.2em]"
+              >
+                {t('personnel', lang)}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-8">
+            <div className="bg-[#003366] p-8 rounded-[40px] text-white shadow-2xl">
+               <h3 className="text-2xl font-black uppercase tracking-tighter">{t('performance_matrix', lang)}</h3>
+               <p className="text-[#FFCC00] text-[10px] font-black uppercase tracking-widest mt-1">Evaluando Personal Bajo su Cargo</p>
+            </div>
+            <EmployeeList 
+              employees={filteredEmployees} 
+              onSelect={(emp) => { setSelectedEmployee(emp); setActiveTab('employees'); }}
+              onAddNew={() => setIsAddingEmployee(true)}
+              onDelete={handleDeleteEmployee}
+              onClearAll={handleClearAll}
+              onEvaluate={isRRHH ? undefined : startEvaluation}
+              currentUserRole={currentUser?.role}
+              lang={lang}
+              isReadOnly
+            />
+          </div>
+        )
+      )}
+
+      {activeTab === 'database' && <DatabaseConsole lang={lang} />}
+
+      {isEvaluating && selectedEmployee && (
+        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-md overflow-y-auto p-4 lg:p-10">
+          <EvaluationForm 
+            employee={selectedEmployee}
+            evaluatorName={currentUser?.username || ''}
+            initialData={editingEvaluation}
+            isViewOnly={isPrinting}
+            onClose={() => { 
+              setIsEvaluating(false); 
+              setEditingEvaluation(undefined); 
+              setSelectedEmployee(null); 
+              setIsPrinting(false);
+            }}
+            onSave={handleSaveEvaluation}
+            lang={lang}
+          />
+        </div>
+      )}
+
+      {isAddingEmployee && (
+        <div className="fixed inset-0 z-[100] bg-[#001a33]/80 backdrop-blur-md flex items-center justify-center p-4">
+          <AddEmployeeForm 
+            onAdd={handleAddEmployee} 
+            onCancel={() => setIsAddingEmployee(false)} 
+            lang={lang} 
+            evaluatorName={currentUser?.username || 'Supervisor'} 
+          />
+        </div>
+      )}
+
+      {isReportOpen && (
+        <MonthlyReportModal 
+          evaluations={filteredEvaluations}
+          employees={filteredEmployees}
+          onClose={() => setIsReportOpen(false)}
+          onUpdateEvaluations={(updatedEvals) => {
+            const updatedAll = evaluations.map(ev => {
+              const match = updatedEvals.find(u => u.id === ev.id);
+              return match || ev;
+            });
+            setEvaluations(updatedAll);
+          }}
+          currentUserRole={currentUser?.role}
+          currentUserUsername={currentUser?.username}
+          lang={lang}
+        />
+      )}
     </Layout>
   );
 };

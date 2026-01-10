@@ -12,21 +12,29 @@ interface EvaluationFormProps {
   onClose: () => void;
   onSave: (evaluation: FullEvaluation) => void;
   lang: Language;
+  isViewOnly?: boolean;
 }
 
 const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
 const MONTHS_EN = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
 
-export default function EvaluationForm({ employee, evaluatorName, initialData, onClose, onSave, lang }: EvaluationFormProps) {
-  const [step, setStep] = useState(1);
+export default function EvaluationForm({ 
+  employee, 
+  evaluatorName, 
+  initialData, 
+  onClose, 
+  onSave, 
+  lang,
+  isViewOnly = false
+}: EvaluationFormProps) {
+  const [step, setStep] = useState(isViewOnly ? 4 : 1);
   const [campo, setCampo] = useState(initialData?.campo || 'CARIÑA');
   
-  // Usar el array MESES para inicializar el mes de forma segura
   const [mes, setMes] = useState(initialData?.mes || MESES[new Date().getMonth()]);
   const [anio, setAnio] = useState(initialData?.año || new Date().getFullYear().toString());
 
   const user = useMemo(() => VulcanDB.getUser(evaluatorName), [evaluatorName]);
-  const isDirector = user?.role === UserRole.Director;
+  const isGerente = user?.role === UserRole.Gerente;
   const isVulcan = employee.department === Department.VULCAN;
 
   const [criteria, setCriteria] = useState<TechnicalCriterion[]>([]);
@@ -46,6 +54,7 @@ export default function EvaluationForm({ employee, evaluatorName, initialData, o
   const porcentajeDesempeño = (promedioFinalNum / 5) * 100;
 
   const handleScoreChange = (id: string, score: number) => {
+    if (isViewOnly) return;
     setCriteria(prev => prev.map(c => c.id === id ? { ...c, score } : c));
   };
 
@@ -68,18 +77,20 @@ export default function EvaluationForm({ employee, evaluatorName, initialData, o
       id: initialData?.id,
       employeeId: employee.id,
       campo, mes, año: anio, evaluador: initialData?.evaluador || evaluatorName, 
-      cargoEvaluador: initialData?.cargoEvaluador || (isDirector ? "Dirección General" : "Supervisor / Evaluador"),
+      cargoEvaluador: initialData?.cargoEvaluador || (isGerente ? "Dirección General" : "Supervisor / Evaluador"),
       areaDesempeño: isVulcan ? 'Administrativa' : 'Operativa', 
       criteria, observaciones,
       condicionBono: finalBonusStatus,
-      recomendacionSalarial: "Evaluación Técnica Registrada",
+      recomendacionSalarial: initialData?.recomendacionSalarial || "Evaluación Técnica Registrada",
       incrementoSalarial: initialData?.incrementoSalarial, 
       totalPuntos, promedioFinal: promedioFinalNum,
       date: initialData?.date || new Date().toISOString().split('T')[0],
       authorizedBy: initialData?.authorizedBy
     };
     
-    onSave(evaluationData);
+    if (!isViewOnly) {
+      onSave(evaluationData);
+    }
     setStep(4);
   };
 
@@ -90,7 +101,7 @@ export default function EvaluationForm({ employee, evaluatorName, initialData, o
           <div className="bg-white p-3 rounded-xl font-black text-[#003366] text-xl shadow-lg">VULCAN</div>
           <div>
             <h2 className="text-xl font-black uppercase tracking-tighter">
-              {initialData ? t('edit_form_title', lang) : t('form_title', lang)} {employee.department}
+              {isViewOnly ? t('official_acta', lang) : (initialData ? t('edit_form_title', lang) : t('form_title', lang))} {employee.department}
             </h2>
             <p className="text-[10px] font-bold uppercase text-[#FFCC00] tracking-[0.2em]">{employee.name}</p>
           </div>
@@ -152,6 +163,7 @@ export default function EvaluationForm({ employee, evaluatorName, initialData, o
                                   {[1, 2, 3, 4, 5].map(v => (
                                     <button 
                                       key={v}
+                                      disabled={isViewOnly}
                                       onClick={() => handleScoreChange(c.id, v)}
                                       className={`w-8 h-8 rounded-lg font-black text-[9px] transition-all border ${
                                         c.score === v ? 'bg-[#FFCC00] border-[#FFCC00] text-[#003366] scale-110 shadow-md' : 'bg-white border-slate-100 text-slate-300'
@@ -191,6 +203,7 @@ export default function EvaluationForm({ employee, evaluatorName, initialData, o
                             {[1, 2, 3, 4, 5].map(v => (
                               <button 
                                 key={v}
+                                disabled={isViewOnly}
                                 onClick={() => handleScoreChange(c.id, v)}
                                 className={`w-9 h-9 rounded-xl font-black text-[10px] transition-all border-2 ${
                                   c.score === v ? 'bg-[#FFCC00] border-[#FFCC00] text-[#003366] shadow-lg scale-110' : 'bg-white border-slate-100 text-slate-300'
@@ -208,26 +221,18 @@ export default function EvaluationForm({ employee, evaluatorName, initialData, o
               </div>
             )}
 
-            <div className="flex justify-between items-center bg-[#001a33] p-8 rounded-[32px] text-white shadow-xl">
-              <div className="flex items-center gap-8">
-                 <div className="text-center">
-                    <p className="text-[8px] font-black uppercase text-slate-400 mb-1">{t('average', lang)}</p>
-                    <p className="text-2xl font-black text-[#FFCC00]">{promedioFinalNum}</p>
-                 </div>
-                 <div className="text-center border-l border-white/10 pl-8">
-                    <p className="text-[8px] font-black uppercase text-slate-400 mb-1">{t('total_efficacy', lang)}</p>
-                    <p className="text-2xl font-black text-[#FFCC00]">{porcentajeDesempeño.toFixed(1)}%</p>
-                 </div>
+            <div className="flex justify-center items-center bg-[#001a33] p-8 rounded-[32px] text-white shadow-xl">
+              <div className="flex items-center gap-16">
+                 <button 
+                   disabled={criteria.some(c => c.score === 0)}
+                   onClick={() => setStep(3)} 
+                   className={`px-12 py-4 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${
+                     criteria.some(c => c.score === 0) ? 'bg-white/5 text-white/10' : 'bg-[#FFCC00] text-[#003366] shadow-xl hover:scale-105'
+                   }`}
+                 >
+                   {t('continue', lang)} →
+                 </button>
               </div>
-              <button 
-                disabled={criteria.some(c => c.score === 0)}
-                onClick={() => setStep(3)} 
-                className={`px-12 py-4 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${
-                  criteria.some(c => c.score === 0) ? 'bg-white/5 text-white/10' : 'bg-[#FFCC00] text-[#003366] shadow-xl hover:scale-105'
-                }`}
-              >
-                {t('continue', lang)} →
-              </button>
             </div>
           </div>
         )}
@@ -237,6 +242,7 @@ export default function EvaluationForm({ employee, evaluatorName, initialData, o
              <div className="space-y-3">
                 <h4 className="text-[10px] font-black text-[#003366] uppercase tracking-widest">{t('observations', lang)}</h4>
                 <textarea 
+                  disabled={isViewOnly}
                   value={observaciones} 
                   onChange={e => setObservaciones(e.target.value)}
                   className="w-full h-32 p-6 bg-slate-50 border-2 border-slate-100 rounded-[32px] outline-none focus:border-[#003366] text-sm shadow-inner"
@@ -290,7 +296,7 @@ export default function EvaluationForm({ employee, evaluatorName, initialData, o
                       <td className="border border-slate-800 p-2 bg-slate-50 font-black uppercase">{t('month', lang)}</td>
                       <td className="border border-slate-800 p-2 uppercase font-black">{mes} {anio}</td>
                       <td className="border border-slate-800 p-2 bg-slate-50 font-black uppercase">{t('report_date', lang)}</td>
-                      <td className="border border-slate-800 p-2 uppercase">{new Date().toLocaleDateString(lang === 'es' ? 'es-ES' : 'en-US')}</td>
+                      <td className="border border-slate-800 p-2 uppercase">{initialData?.date || new Date().toLocaleDateString(lang === 'es' ? 'es-ES' : 'en-US')}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -313,12 +319,15 @@ export default function EvaluationForm({ employee, evaluatorName, initialData, o
                           <td className="border border-slate-800 p-2 text-center font-black text-xs">{c.score}</td>
                         </tr>
                       ))}
-                      <tr className="bg-slate-200 font-black">
-                        <td colSpan={2} className="border border-slate-800 p-3 text-right uppercase">{t('total_efficacy', lang)}:</td>
-                        <td className="border border-slate-800 p-3 text-center text-sm text-[#003366]">{porcentajeDesempeño.toFixed(1)}%</td>
-                      </tr>
                     </tbody>
                   </table>
+                </div>
+
+                <div className="mb-8">
+                   <h4 className="text-[10px] font-black uppercase mb-2">II. OBSERVACIONES</h4>
+                   <div className="border border-slate-800 p-4 min-h-[80px] text-[10px] uppercase">
+                      {observaciones || "SIN OBSERVACIONES ADICIONALES."}
+                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-20 text-center mt-20">
